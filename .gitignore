@@ -8,6 +8,7 @@ project/boot/
 .idea/compiler.xml
 .idea/workspace.xml
 .idea/vcs.xml
+.idea/modules/squeryl.iml
 .idea/uiDesigner.xml
 .idea/dictionaries/
 .idea/copyright/
