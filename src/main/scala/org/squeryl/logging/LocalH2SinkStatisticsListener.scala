@@ -42,7 +42,7 @@ class LocalH2SinkStatisticsListener(val h2Session: AbstractSession) extends Stat
 
   private val _worker = new Thread {
 
-    override def run() = {
+    override def run(): Unit = {
       h2Session.bindToCurrentThread
       while(!_closed) {
         val op = _queue.take
@@ -51,11 +51,11 @@ class LocalH2SinkStatisticsListener(val h2Session: AbstractSession) extends Stat
     }
   }
 
-  _worker.start
+  _worker.start()
 
-  def shutdown = _closed = true
+  def shutdown(): Unit = _closed = true
 
-  private def _pushOp(op: =>Unit) =
+  private def _pushOp(op: =>Unit): Unit =
     if(!_closed) {
       _queue.put(op _)
     }

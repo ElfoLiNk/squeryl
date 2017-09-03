@@ -40,10 +40,10 @@ trait QueryDsl
   outerQueryDsl =>
   
   implicit def kedForKeyedEntities[A,K](implicit ev: A <:< KeyedEntity[K], m:Manifest[A]): KeyedEntityDef[A,K] = new KeyedEntityDef[A,K] {
-    def getId(a:A) = a.id
-    def isPersisted(a:A) = a.isPersisted
+    def getId(a:A): K = a.id
+    def isPersisted(a:A): Boolean = a.isPersisted
     def idPropertyName = "id"
-    override def optimisticCounterPropertyName = 
+    override def optimisticCounterPropertyName: Option[String] =
       if(classOf[Optimistic].isAssignableFrom(m.runtimeClass))
         Some("occVersionNumber")
       else
@@ -56,16 +56,16 @@ trait QueryDsl
                 
     new Iterable[R] {
 
-      val hasFirst = i.hasNext
+      val hasFirst: Boolean = i.hasNext
                   
-      lazy val firstRow = 
+      lazy val firstRow: Option[R] =
         if(hasFirst) Some(i.next) else None    
       
-      override def head = firstRow.get
+      override def head: R = firstRow.get
       
-      override def headOption = firstRow
+      override def headOption: Option[R] = firstRow
       
-      override def isEmpty = ! hasFirst
+      override def isEmpty: Boolean = ! hasFirst
       
       def iterator = 
         new IteratorConcatenation(firstRow.iterator, i)
@@ -80,16 +80,16 @@ trait QueryDsl
   def using[A](session: AbstractSession)(a: =>A): A =
     session.using(a _)
 
-  def transaction[A](sf: SessionFactory)(a: =>A) =
+  def transaction[A](sf: SessionFactory)(a: =>A): A =
     sf.newSession.withinTransaction(a _)
   
-  def inTransaction[A](sf: SessionFactory)(a: =>A) =
+  def inTransaction[A](sf: SessionFactory)(a: =>A): A =
     if(! Session.hasCurrentSession)
       sf.newSession.withinTransaction(a _)
     else
       a
 
-   def transaction[A](s: AbstractSession)(a: =>A) =
+   def transaction[A](s: AbstractSession)(a: =>A): A =
      s.withinTransaction(a _)
    
   /**
@@ -132,46 +132,46 @@ trait QueryDsl
     new fsm.QueryElementsImpl[Conditioned](Some(b _), Nil)
 
   def withCte(queries: Query[_]*): WithState =
-    new fsm.WithState(queries.toList.map(_.copy(false, Nil)))
+    new fsm.WithState(queries.toList.map(_.copy(asRoot = false, Nil)))
 
   def &[A,T](i: =>TypedExpression[A,T]): A =
     FieldReferenceLinker.pushExpressionOrCollectValue[A](i _)
     
   implicit def typedExpression2OrderByArg[E](e: E)(implicit E: E => TypedExpression[_, _]): OrderByArg = new OrderByArg(e)
 
-  implicit def orderByArg2OrderByExpression(a: OrderByArg) = new OrderByExpression(a)
+  implicit def orderByArg2OrderByExpression(a: OrderByArg): OrderByExpression = new OrderByExpression(a)
 
   def sDevPopulation[T2 >: TOptionFloat, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("stddev_pop", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("stddev_pop", Seq(b)))
          
   def sDevSample[T2 >: TOptionFloat, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("stddev_samp", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("stddev_samp", Seq(b)))
          
   def varPopulation[T2 >: TOptionFloat, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("var_pop", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("var_pop", Seq(b)))
          
   def varSample[T2 >: TOptionFloat, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("var_samp", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("var_samp", Seq(b)))
   
   def max[T2 >: TOption, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("max", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("max", Seq(b)))
 
   def min[T2 >: TOption, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("min", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("min", Seq(b)))
 
   def avg[T2 >: TOptionFloat, T1 <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("avg", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("avg", Seq(b)))
 
   def sum[T2 >: TOption, T1 >: TNumericLowerTypeBound <: T2, A1, A2]
          (b: TypedExpression[A1,T1])
-         (implicit f: TypedExpressionFactory[A2,T2]) = f.convert(new FunctionNode("sum", Seq(b)))
+         (implicit f: TypedExpressionFactory[A2,T2]): TypedExpressionConversion[A2, T2] = f.convert(new FunctionNode("sum", Seq(b)))
 
   def nvl[T4 <: TNonOption,
           T1 >: TOption,
@@ -184,23 +184,23 @@ trait QueryDsl
   
   def not(b: LogicalBoolean) = new FunctionNode("not", Seq(b)) with LogicalBoolean
 
-  def upper[A1,T1](s: TypedExpression[A1,T1])(implicit f: TypedExpressionFactory[A1,T1], ev2: T1 <:< TOptionString) = 
+  def upper[A1,T1](s: TypedExpression[A1,T1])(implicit f: TypedExpressionFactory[A1,T1], ev2: T1 <:< TOptionString): TypedExpressionConversion[A1, T1] =
     f.convert(new FunctionNode("upper", Seq(s)))
   
-  def lower[A1,T1](s: TypedExpression[A1,T1])(implicit f: TypedExpressionFactory[A1,T1], ev2: T1 <:< TOptionString) = 
+  def lower[A1,T1](s: TypedExpression[A1,T1])(implicit f: TypedExpressionFactory[A1,T1], ev2: T1 <:< TOptionString): TypedExpressionConversion[A1, T1] =
     f.convert(new FunctionNode("lower", Seq(s)))
 
-  def exists[A1](query: Query[A1]) = new ExistsExpression(query.copy(false, Nil).ast, "exists")
+  def exists[A1](query: Query[A1]) = new ExistsExpression(query.copy(asRoot = false, Nil).ast, "exists")
 
-  def notExists[A1](query: Query[A1]) = new ExistsExpression(query.copy(false, Nil).ast, "not exists")
+  def notExists[A1](query: Query[A1]) = new ExistsExpression(query.copy(asRoot = false, Nil).ast, "not exists")
          
-  implicit val numericComparisonEvidence   = new CanCompare[TNumeric, TNumeric]         
-  implicit val dateComparisonEvidence      = new CanCompare[TOptionDate, TOptionDate]
-  implicit val timestampComparisonEvidence = new CanCompare[TOptionTimestamp, TOptionTimestamp]
-  implicit val stringComparisonEvidence    = new CanCompare[TOptionString, TOptionString]
-  implicit val booleanComparisonEvidence   = new CanCompare[TOptionBoolean, TOptionBoolean]
-  implicit val uuidComparisonEvidence      = new CanCompare[TOptionUUID, TOptionUUID]
-  implicit def enumComparisonEvidence[A]   = new CanCompare[TEnumValue[A],TEnumValue[A]]
+  implicit val numericComparisonEvidence: CanCompare[TNumeric, TNumeric] = new CanCompare[TNumeric, TNumeric]
+  implicit val dateComparisonEvidence: CanCompare[TOptionDate, TOptionDate] = new CanCompare[TOptionDate, TOptionDate]
+  implicit val timestampComparisonEvidence: CanCompare[TOptionTimestamp, TOptionTimestamp] = new CanCompare[TOptionTimestamp, TOptionTimestamp]
+  implicit val stringComparisonEvidence: CanCompare[TOptionString, TOptionString] = new CanCompare[TOptionString, TOptionString]
+  implicit val booleanComparisonEvidence: CanCompare[TOptionBoolean, TOptionBoolean] = new CanCompare[TOptionBoolean, TOptionBoolean]
+  implicit val uuidComparisonEvidence: CanCompare[TOptionUUID, TOptionUUID] = new CanCompare[TOptionUUID, TOptionUUID]
+  implicit def enumComparisonEvidence[A]: CanCompare[TEnumValue[A], TEnumValue[A]] = new CanCompare[TEnumValue[A],TEnumValue[A]]
   
   implicit def concatenationConversion[A1,A2,T1,T2](co: ConcatOp[A1,A2,T1,T2]): TypedExpression[String,TString] = 
     new ConcatOperationNode[String,TString](co.a1, co.a2, InternalFieldMapper.stringTEF.createOutMapper)
@@ -215,7 +215,7 @@ trait QueryDsl
     new ConcatOperationNode[Option[String],TOptionString](co.a1, co.a2, InternalFieldMapper.optionStringTEF.createOutMapper)
   
   class ConcatOperationNode[A,T](e1: ExpressionNode, e2: ExpressionNode, val mapper: OutMapper[A]) extends BinaryOperatorNode(e1,e2, "||", false) with TypedExpression[A,T] {
-    override def doWrite(sw: StatementWriter) =
+    override def doWrite(sw: StatementWriter): Unit =
       sw.databaseAdapter.writeConcatOperator(e1, e2, sw)       
   }
     
@@ -229,9 +229,9 @@ trait QueryDsl
 
   trait ScalarQuery[T] extends Query[T] with SingleColumnQuery[T] with SingleRowQuery[T]
 
-  implicit def scalarQuery2Scalar[T](sq: ScalarQuery[T]) = sq.head
+  implicit def scalarQuery2Scalar[T](sq: ScalarQuery[T]): T = sq.head
 
-  implicit def countQueryableToIntTypeQuery[R](q: Queryable[R]) = new CountSubQueryableQuery(q)
+  implicit def countQueryableToIntTypeQuery[R](q: Queryable[R]): CountSubQueryableQuery = new CountSubQueryableQuery(q)
 
   def count: CountFunction = count()
 
@@ -248,9 +248,9 @@ trait QueryDsl
     )
     with TypedExpression[Long,TLong] {
     
-    def mapper = InternalFieldMapper.longTEF.createOutMapper    
+    def mapper: OutMapper[Long] = InternalFieldMapper.longTEF.createOutMapper
     
-    override def doWrite(sw: StatementWriter) = {
+    override def doWrite(sw: StatementWriter): Unit = {
 
       sw.write(name)
       sw.write("(")
@@ -258,7 +258,7 @@ trait QueryDsl
       if(isDistinct)
         sw.write("distinct ")
 
-      sw.writeNodesWithSeparator(args, ",", false)
+      sw.writeNodesWithSeparator(args, ",", newLineAfterSeparator = false)
       sw.write(")")
     }
   }
@@ -270,30 +270,30 @@ trait QueryDsl
     private val _inner:Query[Measures[Long]] =
       from(q)(r => compute(_countFunc))
 
-    def iterator = _inner.map(m => m.measures).iterator
+    def iterator: Iterator[Long] = _inner.map(m => m.measures).iterator
 
     def Count: ScalarQuery[Long] = this
 
     def statement: String = _inner.statement
 
     // Paginating a Count query makes no sense perhaps an org.squeryl.internals.Utils.throwError() would be more appropriate here:
-    def page(offset:Int, length:Int) = this      
+    def page(offset:Int, length:Int): CountSubQueryableQuery = this
 
-    def distinct = this
+    def distinct: CountSubQueryableQuery = this
 
-    def forUpdate = _inner.forUpdate
+    def forUpdate: ScalarQuery[Long] = _inner.forUpdate
 
-    def dumpAst = _inner.dumpAst
+    def dumpAst: String = _inner.dumpAst
 
-    def ast = _inner.ast
+    def ast: ExpressionNode = _inner.ast
 
-    protected[squeryl] def invokeYield(rsm: ResultSetMapper, rs: ResultSet) =
+    protected[squeryl] def invokeYield(rsm: ResultSetMapper, rs: ResultSet): Long =
       _inner.invokeYield(rsm, rs).measures
 
     override private[squeryl] def copy(asRoot:Boolean, newUnions: List[(String, Query[Long])]) =
       new CountSubQueryableQuery(q)
 
-    def name = _inner.name
+    def name: String = _inner.name
 
     private[squeryl] def give(rsm: ResultSetMapper, rs: ResultSet) =
       q.invokeYield(rsm, rs)
@@ -313,32 +313,32 @@ trait QueryDsl
 
   implicit def singleColComputeQuery2ScalarQuery[T](cq: Query[Measures[T]]): ScalarQuery[T] = new ScalarMeasureQuery[T](cq)
   
-  implicit def singleColComputeQuery2Scalar[T](cq: Query[Measures[T]]) = new ScalarMeasureQuery[T](cq).head
+  implicit def singleColComputeQuery2Scalar[T](cq: Query[Measures[T]]): T = new ScalarMeasureQuery[T](cq).head
 
   class ScalarMeasureQuery[T](q: Query[Measures[T]]) extends Query[T] with ScalarQuery[T] {
 
-    def iterator = q.map(m => m.measures).iterator
+    def iterator: Iterator[T] = q.map(m => m.measures).iterator
 
-    def distinct = this
+    def distinct: ScalarMeasureQuery[T] = this
 
-    def forUpdate = q.forUpdate
+    def forUpdate: ScalarQuery[T] = q.forUpdate
     
-    def dumpAst = q.dumpAst
+    def dumpAst: String = q.dumpAst
 
     // TODO: think about this : Paginating a Count query makes no sense perhaps an org.squeryl.internals.Utils.throwError() would be more appropriate here.
-    def page(offset:Int, length:Int) = this
+    def page(offset:Int, length:Int): ScalarMeasureQuery[T] = this
     
     def statement: String = q.statement
     
-    def ast = q.ast
+    def ast: ExpressionNode = q.ast
 
-    protected[squeryl] def invokeYield(rsm: ResultSetMapper, rs: ResultSet) =
+    protected[squeryl] def invokeYield(rsm: ResultSetMapper, rs: ResultSet): T =
       q.invokeYield(rsm, rs).measures
 
     override private[squeryl] def copy(asRoot:Boolean, newUnions: List[(String, Query[T])]): Query[T] =
       new ScalarMeasureQuery(q)
 
-    def name = q.name
+    def name: String = q.name
 
     private[squeryl] def give(rsm: ResultSetMapper, rs: ResultSet) =
       q.invokeYield(rsm, rs).measures
@@ -359,7 +359,7 @@ trait QueryDsl
   /**
    * Used for supporting 'inhibitWhen' dynamic queries
    */
-  implicit def queryable2OptionalQueryable[A](q: Queryable[A]) = new OptionalQueryable[A](q)
+  implicit def queryable2OptionalQueryable[A](q: Queryable[A]): OptionalQueryable[A] = new OptionalQueryable[A](q)
 
   //implicit def view2QueryAll[A](v: View[A]) = from(v)(a=> select(a))
 
@@ -378,7 +378,7 @@ trait QueryDsl
       kedL: KeyedEntityDef[L,_],
       kedR: KeyedEntityDef[R,_]) {
 
-    def via[A](f: (L,R,A)=>Tuple2[EqualityExpression,EqualityExpression])(implicit manifestA: Manifest[A], schema: Schema, kedA: KeyedEntityDef[A,_]) = {
+    def via[A](f: (L,R,A)=>((EqualityExpression, EqualityExpression)))(implicit manifestA: Manifest[A], schema: Schema, kedA: KeyedEntityDef[A,_]): ManyToManyRelationImpl[L, R, A] = {
       val m2m = new ManyToManyRelationImpl(l,r,manifestA.runtimeClass.asInstanceOf[Class[A]], f, schema, nameOverride, kedL, kedR, kedA)
       schema._addTable(m2m)
       m2m
@@ -388,25 +388,25 @@ trait QueryDsl
   private def invalidBindingExpression = Utils.throwError("Binding expression of relation uses a def, not a field (val or var)")
   
   class ManyToManyRelationImpl[L, R, A](
-      val leftTable: Table[L], 
-      val rightTable: Table[R], 
-      aClass: Class[A], 
-      f: (L,R,A)=>Tuple2[EqualityExpression,EqualityExpression],
-      schema: Schema, 
-      nameOverride: Option[String],
-      kedL: KeyedEntityDef[L,_],
-      kedR: KeyedEntityDef[R,_],
-      kedA: KeyedEntityDef[A,_])
+                                         val leftTable: Table[L],
+                                         val rightTable: Table[R],
+                                         aClass: Class[A],
+                                         f: (L,R,A)=>((EqualityExpression, EqualityExpression)),
+                                         schema: Schema,
+                                         nameOverride: Option[String],
+                                         kedL: KeyedEntityDef[L,_],
+                                         kedR: KeyedEntityDef[R,_],
+                                         kedA: KeyedEntityDef[A,_])
     extends Table[A](nameOverride.getOrElse(schema.tableNameFromClass(aClass)), aClass, schema, None, Some(kedA)) with ManyToManyRelation[L,R,A] {
     thisTableOfA =>    
 
-    def thisTable = thisTableOfA
+    def thisTable: ManyToManyRelationImpl[L, R, A] = thisTableOfA
     
     schema._addRelation(this)
     
     private val (_leftEqualityExpr, _rightEqualityExpr) = {
 
-      var e2: Option[Tuple2[EqualityExpression,EqualityExpression]] = None
+      var e2: Option[(EqualityExpression, EqualityExpression)] = None
 
       from(leftTable, rightTable, thisTableOfA)((l,r,a) => {
         e2 = Some(f(l,r,a))
@@ -415,10 +415,10 @@ trait QueryDsl
       
       val e2_ = e2.get
       
-      if(!e2_._1.filterDescendantsOfType[ConstantTypedExpression[_,_]].isEmpty)
+      if(e2_._1.filterDescendantsOfType[ConstantTypedExpression[_, _]].nonEmpty)
         invalidBindingExpression
 
-      if(!e2_._2.filterDescendantsOfType[ConstantTypedExpression[_,_]].isEmpty)
+      if(e2_._2.filterDescendantsOfType[ConstantTypedExpression[_, _]].nonEmpty)
         invalidBindingExpression
 
       //invert Pair[EqualityExpression,EqualityExpression] if it has been declared in reverse :
@@ -439,14 +439,14 @@ trait QueryDsl
       )
 
 
-    private val (leftPkFmd, leftFkFmd) = _splitEquality(_leftEqualityExpr, thisTable, false)
+    private val (leftPkFmd, leftFkFmd) = _splitEquality(_leftEqualityExpr, thisTable, isSelfReference = false)
 
-    private val (rightPkFmd, rightFkFmd) = _splitEquality(_rightEqualityExpr, thisTable, false)
+    private val (rightPkFmd, rightFkFmd) = _splitEquality(_rightEqualityExpr, thisTable, isSelfReference = false)
 
-    val leftForeignKeyDeclaration =
+    val leftForeignKeyDeclaration: ForeignKeyDeclaration =
       schema._createForeignKeyDeclaration(leftFkFmd.columnName, leftPkFmd.columnName)
 
-    val rightForeignKeyDeclaration =
+    val rightForeignKeyDeclaration: ForeignKeyDeclaration =
       schema._createForeignKeyDeclaration(rightFkFmd.columnName, rightPkFmd.columnName)
     
     private def _associate[T](o: T, m2m: ManyToMany[T,A]): A = {
@@ -477,7 +477,7 @@ trait QueryDsl
 
       new DelegateQuery(q) with ManyToMany[R,A] {
         
-        def kedL = thisTableOfA.kedR
+        def kedL: KeyedEntityDef[R, _] = thisTableOfA.kedR
 
         private def _assignKeys(r: R, a: AnyRef): Unit = {
           
@@ -488,13 +488,13 @@ trait QueryDsl
           rightFkFmd.set(a, rightPk)
         }
 
-        def associationMap =
+        def associationMap: Query[(R, A)] =
           from(thisTableOfA, rightTable)((a,r) => {
             val matchClause = f(leftSideMember, r, a)
             outerQueryDsl.where(matchClause._1 and matchClause._2).select((r,a))
           })
 
-        def assign(o: R, a: A) = {
+        def assign(o: R, a: A): A = {
           _assignKeys(o, a.asInstanceOf[AnyRef])
           a
         }
@@ -515,25 +515,25 @@ trait QueryDsl
         def associate(o: R): A =
           _associate(o,this)
 
-        def dissociate(o: R) =
+        def dissociate(o: R): Boolean =
           thisTableOfA.deleteWhere(a0 => _whereClauseForAssociations(a0) and _equalityForRightSide(a0, o)) > 0
 
-        def _whereClauseForAssociations(a0: A) = {
+        def _whereClauseForAssociations(a0: A): LogicalBoolean = {
           val leftPk = leftPkFmd.get(leftSideMember.asInstanceOf[AnyRef])
           leftFkFmd.get(a0.asInstanceOf[AnyRef])
           FieldReferenceLinker.createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(leftPk, None)
         }
 
-        def _equalityForRightSide(a0: A, r: R) = {
+        def _equalityForRightSide(a0: A, r: R): LogicalBoolean = {
           val rightPk = rightPkFmd.get(r.asInstanceOf[AnyRef])
           rightFkFmd.get(a0.asInstanceOf[AnyRef])
           FieldReferenceLinker.createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(rightPk, None)
         }
 
-        def dissociateAll = 
+        def dissociateAll: Int =
           thisTableOfA.deleteWhere(a0 => _whereClauseForAssociations(a0))
 
-        def associations =
+        def associations: Query[A] =
           thisTableOfA.where(a0 => _whereClauseForAssociations(a0))                  
       }
     }
@@ -547,7 +547,7 @@ trait QueryDsl
 
       new DelegateQuery(q) with ManyToMany[L,A] {
         
-        def kedL = thisTableOfA.kedL
+        def kedL: KeyedEntityDef[L, _] = thisTableOfA.kedL
 
         private def _assignKeys(l: L, a: AnyRef): Unit = {
 
@@ -558,13 +558,13 @@ trait QueryDsl
           leftFkFmd.set(a, leftPk)
         }
 
-        def associationMap =
+        def associationMap: Query[(L, A)] =
           from(thisTableOfA, leftTable)((a,l) => {
              val matchClause = f(l, rightSideMember, a)
              outerQueryDsl.where(matchClause._1 and matchClause._2).select((l, a))
           })
 
-        def assign(o: L, a: A) = {
+        def assign(o: L, a: A): A = {
           _assignKeys(o, a.asInstanceOf[AnyRef])
           a
         }
@@ -585,25 +585,25 @@ trait QueryDsl
         def associate(o: L): A =
           _associate(o,this)
 
-        def dissociate(o: L) =
+        def dissociate(o: L): Boolean =
           thisTableOfA.deleteWhere(a0 => _whereClauseForAssociations(a0) and _leftEquality(o, a0)) > 0
 
-        def _leftEquality(l: L, a0: A) = {
+        def _leftEquality(l: L, a0: A): LogicalBoolean = {
           val leftPk = leftPkFmd.get(l.asInstanceOf[AnyRef])
           leftFkFmd.get(a0.asInstanceOf[AnyRef])
           FieldReferenceLinker.createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(leftPk, None)
         }
 
-        def _whereClauseForAssociations(a0: A) = {
+        def _whereClauseForAssociations(a0: A): LogicalBoolean = {
           val rightPk = rightPkFmd.get(rightSideMember.asInstanceOf[AnyRef])
           rightFkFmd.get(a0.asInstanceOf[AnyRef])
           FieldReferenceLinker.createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(rightPk, None)
         }
 
-        def dissociateAll =
+        def dissociateAll: Int =
           thisTableOfA.deleteWhere(a0 => _whereClauseForAssociations(a0))
 
-        def associations =
+        def associations: Query[A] =
           thisTableOfA.where(a0 => _whereClauseForAssociations(a0))      
       }
     }
@@ -641,7 +641,7 @@ trait QueryDsl
       val ee_ = ee.get  //here we have the equality AST (_ee) contains a left and right node, SelectElementReference
       //that refer to FieldSelectElement, who in turn refer to the FieldMetaData
 
-      if(! ee_.filterDescendantsOfType[ConstantTypedExpression[_,_]].isEmpty)
+      if(ee_.filterDescendantsOfType[ConstantTypedExpression[_, _]].nonEmpty)
         invalidBindingExpression
         
            
@@ -649,19 +649,19 @@ trait QueryDsl
       _splitEquality(ee.get, rightTable, _isSelfReference)
     }
 
-    val foreignKeyDeclaration =
+    val foreignKeyDeclaration: ForeignKeyDeclaration =
       schema._createForeignKeyDeclaration(_rightFkFmd.columnName, _leftPkFmd.columnName)
     
     def left(leftSide: O): OneToMany[M] = {
           
-      val q = from(rightTable)(m => where(f(leftSide, m)) select(m))
+      val q = from(rightTable)(m => where(f(leftSide, m)) select m)
 
       new DelegateQuery(q) with OneToMany[M] {
 
-        def deleteAll =
+        def deleteAll(): Int =
           rightTable.deleteWhere(m => f(leftSide, m))
 
-        def assign(m: M) = {
+        def assign(m: M): M = {
           val m0 = m.asInstanceOf[AnyRef]
           val l0 = leftSide.asInstanceOf[AnyRef]
           
@@ -670,7 +670,7 @@ trait QueryDsl
           m
         }
 
-        def associate(m: M) = {
+        def associate(m: M): M = {
           assign(m)
           rightTable.insertOrUpdate(m)(kedM)
         }
@@ -679,11 +679,11 @@ trait QueryDsl
 
     def right(rightSide: M): ManyToOne[O] = {
 
-      val q = from(leftTable)(o => where(f(o,rightSide)) select(o))
+      val q = from(leftTable)(o => where(f(o,rightSide)) select o)
 
       new DelegateQuery(q) with ManyToOne[O] {
 
-        def assign(one: O) = {
+        def assign(one: O): O = {
           val o = one.asInstanceOf[AnyRef]
           val r = rightSide.asInstanceOf[AnyRef]
 
@@ -692,7 +692,7 @@ trait QueryDsl
           one
         }
 
-        def delete =
+        def delete: Boolean =
           leftTable.deleteWhere(o => f(o, rightSide)) > 0
       }
     }
@@ -727,14 +727,14 @@ trait QueryDsl
       implicit
         ev1: A1 => TypedExpression[A1, _],
         ev2: A2 => TypedExpression[A2, _]) =
-    new CompositeKey2(a1, a2)
+    CompositeKey2(a1, a2)
 
   def compositeKey[A1,A2,A3](a1: A1, a2: A2, a3: A3)(
       implicit
         ev1: A1 => TypedExpression[A1, _],
         ev2: A2 => TypedExpression[A2, _],
         ev3: A3 => TypedExpression[A3, _]) =
-    new CompositeKey3(a1, a2, a3)
+    CompositeKey3(a1, a2, a3)
 
   def compositeKey[A1,A2,A3,A4](a1: A1, a2: A2, a3: A3, a4: A4)(
     implicit
@@ -742,7 +742,7 @@ trait QueryDsl
       ev2: A2 => TypedExpression[A2, _],
       ev3: A3 => TypedExpression[A3, _],
       ev4: A4 => TypedExpression[A4, _]) =
-    new CompositeKey4(a1, a2, a3, a4)
+    CompositeKey4(a1, a2, a3, a4)
 
   def compositeKey[A1,A2,A3,A4,A5](a1: A1, a2: A2, a3: A3, a4: A4, a5: A5)(
       implicit
@@ -751,7 +751,7 @@ trait QueryDsl
         ev3: A3 => TypedExpression[A3, _],
         ev4: A4 => TypedExpression[A4, _],
         ev5: A5 => TypedExpression[A5, _]) =
-    new CompositeKey5(a1, a2, a3, a4, a5)
+    CompositeKey5(a1, a2, a3, a4, a5)
 
   def compositeKey[A1,A2,A3,A4,A5,A6](a1: A1, a2: A2, a3: A3, a4: A4, a5: A5, a6: A6)(
       implicit
@@ -761,7 +761,7 @@ trait QueryDsl
         ev4: A4 => TypedExpression[A4, _],
         ev5: A5 => TypedExpression[A5, _],
         ev6: A6 => TypedExpression[A6, _]) =
-    new CompositeKey6(a1, a2, a3, a4, a5, a6)
+    CompositeKey6(a1, a2, a3, a4, a5, a6)
 
   def compositeKey[A1,A2,A3,A4,A5,A6,A7](a1: A1, a2: A2, a3: A3, a4: A4, a5: A5, a6: A6, a7: A7)(
     implicit
@@ -772,7 +772,7 @@ trait QueryDsl
       ev5: A5 => TypedExpression[A5, _],
       ev6: A6 => TypedExpression[A6, _],
       ev7: A7 => TypedExpression[A7, _]) =
-    new CompositeKey7(a1, a2, a3, a4, a5, a6, a7)
+    CompositeKey7(a1, a2, a3, a4, a5, a6, a7)
 
   def compositeKey[A1,A2,A3,A4,A5,A6,A7,A8](a1: A1, a2: A2, a3: A3, a4: A4, a5: A5, a6: A6, a7: A7, a8: A8)(
       implicit
@@ -784,7 +784,7 @@ trait QueryDsl
         ev6: A6 => TypedExpression[A6, _],
         ev7: A7 => TypedExpression[A7, _],
         ev8: A8 => TypedExpression[A8, _]) =
-    new CompositeKey8(a1, a2, a3, a4, a5, a6, a7, a8)
+    CompositeKey8(a1, a2, a3, a4, a5, a6, a7, a8)
 
   def compositeKey[A1,A2,A3,A4,A5,A6,A7,A8,A9](a1: A1, a2: A2, a3: A3, a4: A4, a5: A5, a6: A6, a7: A7, a8: A8, a9: A9)(
       implicit
@@ -797,21 +797,21 @@ trait QueryDsl
         ev7: A7 => TypedExpression[A7, _],
         ev8: A8 => TypedExpression[A8, _],
         ev9: A9 => TypedExpression[A9, _]) =
-    new CompositeKey9(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+    CompositeKey9(a1, a2, a3, a4, a5, a6, a7, a8, a9)
 
   // Tuple to composite key conversions :
   
   implicit def t2te[A1,A2](t: (A1,A2))(
       implicit
         ev1: A1 => TypedExpression[A1, _],
-        ev2: A2 => TypedExpression[A2, _]) =
+        ev2: A2 => TypedExpression[A2, _]): CompositeKey2[A1, A2] =
     new CompositeKey2[A1,A2](t._1, t._2)
 
   implicit def t3te[A1,A2,A3](t: (A1,A2,A3))(
       implicit
         ev1: A1 => TypedExpression[A1, _],
         ev2: A2 => TypedExpression[A2, _],
-        ev3: A3 => TypedExpression[A3, _]) =
+        ev3: A3 => TypedExpression[A3, _]): CompositeKey3[A1, A2, A3] =
     new CompositeKey3[A1,A2,A3](t._1, t._2, t._3)
 
   implicit def t4te[A1,A2,A3,A4](t: (A1,A2,A3,A4))(
@@ -819,7 +819,7 @@ trait QueryDsl
         ev1: A1 => TypedExpression[A1, _],
         ev2: A2 => TypedExpression[A2, _],
         ev3: A3 => TypedExpression[A3, _],
-        ev4: A4 => TypedExpression[A4, _]) =
+        ev4: A4 => TypedExpression[A4, _]): CompositeKey4[A1, A2, A3, A4] =
     new CompositeKey4[A1,A2,A3,A4](t._1, t._2, t._3, t._4)
 
   implicit def t5te[A1,A2,A3,A4,A5](t: (A1,A2,A3,A4,A5))(
@@ -828,7 +828,7 @@ trait QueryDsl
         ev2: A2 => TypedExpression[A2, _],
         ev3: A3 => TypedExpression[A3, _],
         ev4: A4 => TypedExpression[A4, _],
-        ev5: A5 => TypedExpression[A5, _]) =
+        ev5: A5 => TypedExpression[A5, _]): CompositeKey5[A1, A2, A3, A4, A5] =
     new CompositeKey5[A1,A2,A3,A4,A5](t._1, t._2, t._3, t._4, t._5)
 
   implicit def t6te[A1,A2,A3,A4,A5,A6](t: (A1,A2,A3,A4,A5,A6))(
@@ -838,7 +838,7 @@ trait QueryDsl
         ev3: A3 => TypedExpression[A3, _],
         ev4: A4 => TypedExpression[A4, _],
         ev5: A5 => TypedExpression[A5, _],
-        ev6: A6 => TypedExpression[A6, _]) =
+        ev6: A6 => TypedExpression[A6, _]): CompositeKey6[A1, A2, A3, A4, A5, A6] =
     new CompositeKey6[A1,A2,A3,A4,A5,A6](t._1, t._2, t._3, t._4, t._5, t._6)
 
   implicit def t7te[A1,A2,A3,A4,A5,A6,A7](t: (A1,A2,A3,A4,A5,A6,A7))(
@@ -849,7 +849,7 @@ trait QueryDsl
         ev4: A4 => TypedExpression[A4, _],
         ev5: A5 => TypedExpression[A5, _],
         ev6: A6 => TypedExpression[A6, _],
-        ev7: A7 => TypedExpression[A7, _]) =
+        ev7: A7 => TypedExpression[A7, _]): CompositeKey7[A1, A2, A3, A4, A5, A6, A7] =
     new CompositeKey7[A1,A2,A3,A4,A5,A6,A7](t._1, t._2, t._3, t._4, t._5, t._6, t._7)
 
   implicit def t8te[A1,A2,A3,A4,A5,A6,A7,A8](t: (A1,A2,A3,A4,A5,A6,A7,A8))(
@@ -861,7 +861,7 @@ trait QueryDsl
         ev5: A5 => TypedExpression[A5, _],
         ev6: A6 => TypedExpression[A6, _],
         ev7: A7 => TypedExpression[A7, _],
-        ev8: A8 => TypedExpression[A8, _]) =
+        ev8: A8 => TypedExpression[A8, _]): CompositeKey8[A1, A2, A3, A4, A5, A6, A7, A8] =
     new CompositeKey8[A1,A2,A3,A4,A5,A6,A7,A8](t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8)
 
   implicit def t9te[A1,A2,A3,A4,A5,A6,A7,A8,A9](t: (A1,A2,A3,A4,A5,A6,A7,A8,A9))(
@@ -874,7 +874,7 @@ trait QueryDsl
         ev6: A6 => TypedExpression[A6, _],
         ev7: A7 => TypedExpression[A7, _],
         ev8: A8 => TypedExpression[A8, _],
-        ev9: A9 => TypedExpression[A9, _]) =
+        ev9: A9 => TypedExpression[A9, _]): CompositeKey9[A1, A2, A3, A4, A5, A6, A7, A8, A9] =
     new CompositeKey9[A1,A2,A3,A4,A5,A6,A7,A8,A9](t._1, t._2, t._3, t._4, t._5, t._6, t._7, t._8, t._9)
 
   implicit def compositeKey2CanLookup[T <: CompositeKey](t: T): CanLookup = CompositeKeyLookup

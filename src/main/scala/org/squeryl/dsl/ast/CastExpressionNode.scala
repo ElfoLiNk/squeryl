@@ -4,7 +4,7 @@ import org.squeryl.internals._
 
 class CastExpressionNode(expr: ExpressionNode,
                          typ: String) extends ExpressionNode {
-  override def doWrite(sw: StatementWriter) = {
+  override def doWrite(sw: StatementWriter): Unit = {
     sw.write("cast(")
     expr.write(sw)
     sw.write(" as " + sw.databaseAdapter.quoteIdentifier(typ) + ")")
@@ -12,5 +12,5 @@ class CastExpressionNode(expr: ExpressionNode,
 
   override def children = List(expr)
 
-  override def toString = 'CastExpressionNode + ":" + expr.toString + "::" + typ
+  override def toString: String = 'CastExpressionNode + ":" + expr.toString + "::" + typ
 }

@@ -17,27 +17,31 @@ package org.squeryl.internals
  
 
 import java.lang.annotation.Annotation
-import net.sf.cglib.proxy.{Factory, Callback, CallbackFilter, Enhancer, NoOp}
-import java.lang.reflect.{Member, Constructor, Method, Field, Modifier}
-import collection.mutable.{HashSet, ArrayBuffer}
+
+import net.sf.cglib.proxy.{Callback, CallbackFilter, Enhancer, Factory, NoOp}
+import java.lang.reflect.{Constructor, Field, Member, Method, Modifier}
+
+import collection.mutable.ArrayBuffer
 import org.squeryl.annotations._
 import org.squeryl._
 
+import scala.collection.mutable
+
 class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: View[T]) {
 
-  override def toString =
+  override def toString: String =
     'PosoMetaData + "[" + clasz.getSimpleName + "]" + fieldsMetaData.mkString("(",",",")")
 
-  def findFieldMetaDataForProperty(name: String) =
+  def findFieldMetaDataForProperty(name: String): Option[FieldMetaData] =
      _fieldsMetaData.find(fmd => fmd.nameOfProperty == name)
 
-  val isOptimistic = viewOrTable.ked.map(_.isOptimistic).getOrElse(false)
+  val isOptimistic: Boolean = viewOrTable.ked.exists(_.isOptimistic)
   
-  val constructor =
+  val constructor: (Constructor[_], Array[Object]) =
     _const.headOption.orElse(org.squeryl.internals.Utils.throwError(clasz.getName +
             " must have a 0 param constructor or a constructor with only primitive types")).get
 
-  def fieldsMetaData =
+  def fieldsMetaData: Iterable[FieldMetaData] =
     _fieldsMetaData.filter(! _.isTransient)
     
   /**
@@ -50,7 +54,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
 
     val sampleInstance4OptionTypeDeduction =
       try {
-        constructor._1.newInstance(constructor._2 :_*).asInstanceOf[AnyRef];
+        constructor._1.newInstance(constructor._2 :_*).asInstanceOf[AnyRef]
       }
       catch {
         case e:IllegalArgumentException =>
@@ -59,7 +63,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
           throw new RuntimeException("exception occurred while invoking constructor : " + constructor._1, e)
       }
     
-    val members = new ArrayBuffer[(Member,HashSet[Annotation])]
+    val members = new ArrayBuffer[(Member,mutable.HashSet[Annotation])]
 
     _fillWithMembers(clasz, members)
 
@@ -74,7 +78,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
           n
       })
 
-    val fmds = new ArrayBuffer[FieldMetaData];
+    val fmds = new ArrayBuffer[FieldMetaData]
 
     for(e <- name2MembersMap) {
       val name = e._1
@@ -127,7 +131,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
     val k = fmds.find(fmd => fmd.isIdFieldOfKeyedEntity)
 
     val compositePrimaryKeyGetter: Option[Method] =
-      if(k != None) // can't have both PK Field and CompositePK
+      if(k.isDefined) // can't have both PK Field and CompositePK
         None
       else {
         // verify if we have an 'id' method that is a composite key, in this case we need to construct a
@@ -137,16 +141,16 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
 
           val pkMethod = clasz.getMethod(ked.idPropertyName)
 
-          assert(pkMethod != null, "Could not get getter for " + ked.idPropertyName + " in " + clasz.getCanonicalName())
+          assert(pkMethod != null, "Could not get getter for " + ked.idPropertyName + " in " + clasz.getCanonicalName)
 
           pkMethod
         }
       }
 
     val metaDataForPk: Option[Either[FieldMetaData,Method]] =
-      if(k != None)
+      if(k.isDefined)
         Some(Left(k.get))
-      else if(compositePrimaryKeyGetter != None)
+      else if(compositePrimaryKeyGetter.isDefined)
         Some(Right(compositePrimaryKeyGetter.get))
       else
         None
@@ -154,13 +158,13 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
     (fmds, metaDataForPk) //: (Iterable[FieldMetaData], Option[Either[FieldMetaData,Method]])
   }
 
-  def optimisticCounter =
+  def optimisticCounter: Option[FieldMetaData] =
     fieldsMetaData.find(fmd => fmd.isOptimisticCounter)
 
   if(isOptimistic)
-    assert(optimisticCounter != None)
+    assert(optimisticCounter.isDefined)
 
-  def _const = {
+  def _const: ArrayBuffer[(Constructor[_], Array[Object])] = {
 
     val r = new ArrayBuffer[(Constructor[_],Array[Object])]
 
@@ -191,7 +195,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
 
     val res = new Array[Object](params.length)
 
-    for(i <- 0 to params.length -1) {
+    for(i <- params.indices) {
       val v = FieldMetaData.createDefaultValue(schema.fieldMapper, c, params(i), None, None)
       res(i) = v
     }
@@ -203,7 +207,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
     //Enhancer.create(classOfT, new PosoPropertyAccessInterceptor(vxn)).asInstanceOf[T]
   //}
 
-  def createSample(cb: Callback) =
+  def createSample(cb: Callback): T =
     FieldReferenceLinker.executeAndRestoreLastAccessedFieldReference(_builder(cb))
 
   private val _builder: (Callback) => T = {
@@ -236,7 +240,7 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
 
   private def _groupOfMembersIsProperty(property: (Option[Field], Option[Method], Option[Method], Set[Annotation])): Boolean  = {
 
-    if(property._4.find(an => an.isInstanceOf[Transient]) != None)
+    if(property._4.exists(an => an.isInstanceOf[Transient]))
       return false
 
     val hasAField = property._1.exists { field =>
@@ -286,11 +290,11 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
   private def _includeAnnotation(a: Annotation) =
    a.isInstanceOf[ColumnBase] || a.isInstanceOf[Transient] || a.isInstanceOf[OptionType]
   
-  private def _addAnnotations(m: Field, s: HashSet[Annotation]) =
+  private def _addAnnotations(m: Field, s: mutable.HashSet[Annotation]): Unit =
     for(a <- m.getAnnotations if _includeAnnotation(a))
       s.add(a)
 
-  private def _addAnnotations(m: Method, s: HashSet[Annotation]) =
+  private def _addAnnotations(m: Method, s: mutable.HashSet[Annotation]): Unit =
     for(a <- m.getAnnotations if _includeAnnotation(a))
       s.add(a)
 
@@ -298,18 +302,18 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
     schema.fieldMapper.isSupported(c)
       //! classOf[Query[_]].isAssignableFrom(c)
 
-  private def _fillWithMembers(clasz: Class[_], members: ArrayBuffer[(Member,HashSet[Annotation])]): Unit = {
+  private def _fillWithMembers(clasz: Class[_], members: ArrayBuffer[(Member,mutable.HashSet[Annotation])]): Unit = {
 
     for(m <-clasz.getMethods if(m.getDeclaringClass != classOf[Object]) && _includeFieldOrMethodType(m.getReturnType)) {
       m.setAccessible(true)
-      val t = (m, new HashSet[Annotation])
+      val t = (m, new mutable.HashSet[Annotation])
       _addAnnotations(m, t._2)
       members.append(t)
     }
 
     for(m <- clasz.getDeclaredFields if (m.getName.indexOf("$") == -1) && _includeFieldOrMethodType(m.getType)) {
       m.setAccessible(true)
-      val t = (m, new HashSet[Annotation])
+      val t = (m, new mutable.HashSet[Annotation])
       _addAnnotations(m, t._2)
       members.append(t)
     }

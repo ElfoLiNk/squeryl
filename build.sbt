@@ -6,12 +6,10 @@ organization := "org.squeryl"
 
 version := "0.9.9"
 
-javacOptions := Seq("-source", "1.6", "-target", "1.6")
-
 //only release *if* -Drelease=true is passed to JVM
 version := {
   val v = version.value
-  val release = Option(System.getProperty("release")) == Some("true")
+  val release = Option(System.getProperty("release")).contains("true")
   if(release)
     v
   else {

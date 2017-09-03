@@ -128,30 +128,30 @@ trait TypedExpression[A1,T1] extends ExpressionNode {
   def isNotDistinctFrom[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = new BinaryOperatorNodeLogicalBoolean(this, b, "IS NOT DISTINCT FROM")
   
   def ===[A2,T2](q: Query[Measures[A2]])(implicit tef: TypedExpressionFactory[A2,T2], ev: CanCompare[T1, T2]) = 
-    new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "=")
+    new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "=")
 
   def <>[A2,T2](q: Query[Measures[A2]])(implicit tef: TypedExpressionFactory[A2,T2], ev: CanCompare[T1, T2]) = 
-    new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "=")
+    new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "=")
   
   def gt[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = new BinaryOperatorNodeLogicalBoolean(this, b, ">")
   def lt[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = new BinaryOperatorNodeLogicalBoolean(this, b, "<")
   def gte[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = new BinaryOperatorNodeLogicalBoolean(this, b, ">=")
   def lte[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = new BinaryOperatorNodeLogicalBoolean(this, b, "<=")
   
-  def gt [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, ">")
-  def gte[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, ">=")
-  def lt [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "<")
-  def lte[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(false, Nil).ast, "<=")  
+  def gt [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, ">")
+  def gte[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, ">=")
+  def lt [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "<")
+  def lte[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = new BinaryOperatorNodeLogicalBoolean(this, q.copy(asRoot = false, Nil).ast, "<=")
   
   def > [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = gt(q)
   def >=[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = gte(q)
   def < [A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = lt(q)
   def <=[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean = lte(q)
 
-  def >[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = gt(b)
-  def <[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = lt(b)
-  def >=[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = gte(b)
-  def <=[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]) = lte(b)
+  def >[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]): BinaryOperatorNodeLogicalBoolean = gt(b)
+  def <[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]): BinaryOperatorNodeLogicalBoolean = lt(b)
+  def >=[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]): BinaryOperatorNodeLogicalBoolean = gte(b)
+  def <=[A2,T2](b: TypedExpression[A2,T2])(implicit ev: CanCompare[T1, T2]): BinaryOperatorNodeLogicalBoolean = lte(b)
   
   //TODO: add T1 <:< TOption to isNull and isNotNull 
   def isNull= new PostfixOperatorNode("is null", this) with LogicalBoolean
@@ -170,7 +170,7 @@ trait TypedExpression[A1,T1] extends ExpressionNode {
     
   def regex(pattern: String) = new FunctionNode(pattern, Seq(this)) with LogicalBoolean {
 
-    override def doWrite(sw: StatementWriter) =
+    override def doWrite(sw: StatementWriter): Unit =
       Session.currentSession.databaseAdapter.writeRegexExpression(outer, pattern, sw)
   }
   
@@ -182,15 +182,15 @@ trait TypedExpression[A1,T1] extends ExpressionNode {
     new InclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toIn)  
   
   def in[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean =
-    new InclusionOperator(this, new RightHandSideOfIn(q.copy(false, Nil).ast))
+    new InclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
   
   def notIn[A2,T2](t: Traversable[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean =  
     new ExclusionOperator(this, new RightHandSideOfIn(new ConstantExpressionNodeList(t, mapper)).toNotIn)
   
   def notIn[A2,T2](q: Query[A2])(implicit cc: CanCompare[T1,T2]): LogicalBoolean =
-    new ExclusionOperator(this, new RightHandSideOfIn(q.copy(false, Nil).ast))
+    new ExclusionOperator(this, new RightHandSideOfIn(q.copy(asRoot = false, Nil).ast))
   
-  def ~ = this
+  def ~ : TypedExpression[A1, T1] = this
 
   def sample:A1 = mapper.sample
 
@@ -215,9 +215,8 @@ trait TypedExpression[A1,T1] extends ExpressionNode {
         this.asInstanceOf[SelectElementReference[_,_]]
       }
       catch { // TODO: validate this at compile time with a scalac plugin
-        case e:ClassCastException => {
-            throw new RuntimeException("left side of assignment '" + Utils.failSafeString(this.toString)+ "' is invalid, make sure statement uses *only* closure argument.", e)
-        }
+        case e:ClassCastException =>
+          throw new RuntimeException("left side of assignment '" + Utils.failSafeString(this.toString)+ "' is invalid, make sure statement uses *only* closure argument.", e)
       }
 
     val fmd =
@@ -225,9 +224,8 @@ trait TypedExpression[A1,T1] extends ExpressionNode {
         ser.selectElement.asInstanceOf[FieldSelectElement].fieldMetaData
       }
       catch { // TODO: validate this at compile time with a scalac plugin
-        case e:ClassCastException => {
+        case e:ClassCastException =>
           throw new RuntimeException("left side of assignment '" + Utils.failSafeString(this.toString)+ "' is invalid, make sure statement uses *only* closure argument.", e)
-        }
       }
     fmd
   }
@@ -238,11 +236,11 @@ class TypedExpressionConversion[A1,T1](val e: ExpressionNode, bf: TypedExpressio
   
   def mapper: OutMapper[A1] = bf.createOutMapper
   
-  override def inhibited = e.inhibited
+  override def inhibited: Boolean = e.inhibited
 
-  override def doWrite(sw: StatementWriter) = e.doWrite((sw))
+  override def doWrite(sw: StatementWriter): Unit = e.doWrite(sw)
 
-  override def children = e.children  
+  override def children: List[ExpressionNode] = e.children
 }
 
 trait Floatifier[T1,A2,T2] {
@@ -269,15 +267,15 @@ trait JdbcMapper[P,A] {
 
 trait ArrayJdbcMapper[P,A] extends JdbcMapper[P,A] {
   self: TypedExpressionFactory[A,_] =>
-  def nativeJdbcType = sample.asInstanceOf[AnyRef].getClass
+  def nativeJdbcType: Class[_ <: AnyRef] = sample.asInstanceOf[AnyRef].getClass
 }
 
 trait PrimitiveJdbcMapper[A] extends JdbcMapper[A,A] {
   self: TypedExpressionFactory[A,_] =>
   def extractNativeJdbcValue(rs: ResultSet, i: Int): A
-  def convertFromJdbc(v: A) = v
-  def convertToJdbc(v: A) = v
-  def nativeJdbcType = sample.asInstanceOf[AnyRef].getClass
+  def convertFromJdbc(v: A): A = v
+  def convertToJdbc(v: A): A = v
+  def nativeJdbcType: Class[_ <: AnyRef] = sample.asInstanceOf[AnyRef].getClass
 }
 
 abstract class NonPrimitiveJdbcMapper[P,A,T](val primitiveMapper: PrimitiveJdbcMapper[P], val fieldMapper: FieldMapper) extends JdbcMapper[P,A] with TypedExpressionFactory[A,T] {
@@ -288,7 +286,7 @@ abstract class NonPrimitiveJdbcMapper[P,A,T](val primitiveMapper: PrimitiveJdbcM
   def sample: A = 
     convertFromJdbc(primitiveMapper.thisTypedExpressionFactory.sample)
 
- def createFromNativeJdbcValue(v: P) = create(convertFromJdbc(v))
+ def createFromNativeJdbcValue(v: P): TypedExpression[A, T] = create(convertFromJdbc(v))
  
   fieldMapper.register(this)  
 }
@@ -296,7 +294,7 @@ abstract class NonPrimitiveJdbcMapper[P,A,T](val primitiveMapper: PrimitiveJdbcM
 trait TypedExpressionFactory[A,T] {
   self: JdbcMapper[_,A] =>
      
-  def thisAnyRefMapper = this.asInstanceOf[JdbcMapper[AnyRef,A]]
+  def thisAnyRefMapper: JdbcMapper[AnyRef, A] = this.asInstanceOf[JdbcMapper[AnyRef,A]]
   
   def create(a: A) : TypedExpression[A,T] =
     FieldReferenceLinker.takeLastAccessedFieldReference match {
@@ -309,7 +307,7 @@ trait TypedExpressionFactory[A,T] {
   def createConstant(a: A) =
     new ConstantTypedExpression[A,T](a, thisAnyRefMapper.convertToJdbc(a), Some(this))
     
-  def jdbcSample = 
+  def jdbcSample: AnyRef =
     thisAnyRefMapper.convertToJdbc(sample)
   /**
    * Converts the argument into a TypedExpression[A,T], the resulting expression
@@ -355,9 +353,9 @@ trait DeOptionizer[P1, A1, T1, A2 >: Option[A1] <: Option[A1], T2] extends JdbcM
   def convertFromJdbc(v: P1): A2 = Option(deOptionizer.convertFromJdbc(v))
 
   def convertToJdbc(v: A2): P1 =
-    v map (p => deOptionizer.convertToJdbc(p)) getOrElse (null.asInstanceOf[P1])
+    v map (p => deOptionizer.convertToJdbc(p)) getOrElse null.asInstanceOf[P1]
 
-  def extractNativeJdbcValue(rs: ResultSet, i: Int) = deOptionizer.extractNativeJdbcValue(rs, i)
+  def extractNativeJdbcValue(rs: ResultSet, i: Int): P1 = deOptionizer.extractNativeJdbcValue(rs, i)
 
   override def createOutMapper: OutMapper[A2] = new OutMapper[A2] {
     def doMap(rs: ResultSet): A2 = {
@@ -377,7 +375,7 @@ trait DeOptionizer[P1, A1, T1, A2 >: Option[A1] <: Option[A1], T2] extends JdbcM
 }
 
 class ConcatOp[A1,A2,T1,T2](val a1: TypedExpression[A1,T1], val a2: TypedExpression[A2,T2]) extends BinaryOperatorNode(a1,a2, "||") {
-  override def doWrite(sw: StatementWriter) =
+  override def doWrite(sw: StatementWriter): Unit =
       sw.databaseAdapter.writeConcatOperator(a1, a2, sw)   
 }
 
@@ -385,8 +383,8 @@ class ConcatOp[A1,A2,T1,T2](val a1: TypedExpression[A1,T1], val a2: TypedExpress
 class NvlNode[A,T](e1: TypedExpression[_,_], e2: TypedExpression[A,T]) 
   extends BinaryOperatorNode(e1,e2,"nvl", false) with TypedExpression[A,T] {
 
-   def mapper = e2.mapper
+   def mapper: OutMapper[A] = e2.mapper
 
-   override def doWrite(sw: StatementWriter) =
+   override def doWrite(sw: StatementWriter): Unit =
     sw.databaseAdapter.writeNvlCall(left, right, sw)         
 }

@@ -15,10 +15,13 @@
  ***************************************************************************** */
 package org.squeryl.internals
 
-import org.squeryl.dsl.ast.{ExpressionNode}
-import collection.mutable.{HashSet, ArrayBuffer}
+import org.squeryl.dsl.ast.ExpressionNode
+
+import collection.mutable.ArrayBuffer
 import org.squeryl.dsl.ast.ConstantTypedExpression
 import org.squeryl.dsl.ast.ConstantExpressionNodeList
+
+import scala.collection.mutable
 
 
 trait StatementParam
@@ -47,7 +50,7 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
 
   def this(databaseAdapter: DatabaseAdapter) = this(false, databaseAdapter)
 
-  val scope = new HashSet[String]
+  val scope = new mutable.HashSet[String]
 
   protected val _paramList = new ArrayBuffer[StatementParam]
 
@@ -61,20 +64,20 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
     
     indentWidth = outer.indentWidth
     
-    override def surrogate = outer.surrogate
+    override def surrogate: StatementWriter = outer.surrogate
 
-    override def addParam(p: StatementParam) = outer.addParam(p)
+    override def addParam(p: StatementParam): Unit = outer.addParam(p)
   }
 
   def params: Iterable[StatementParam] = _paramList
 
   private val _stringBuilder = new StringBuilder(256)
 
-  def statement = _stringBuilder.toString
+  def statement: String = _stringBuilder.toString
 
-  def addParam(p: StatementParam) = _paramList.append(p)
+  def addParam(p: StatementParam): Unit = _paramList.append(p)
 
-  override def toString =
+  override def toString: String =
     if(_paramList.isEmpty)
       statement
     else
@@ -84,66 +87,66 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
   
   private var indentWidth = 0
 
-  def indent(width: Int) = indentWidth += width
-  def unindent(width: Int) = indentWidth -= width
+  def indent(width: Int): Unit = indentWidth += width
+  def unindent(width: Int): Unit = indentWidth -= width
 
-  def indent: Unit = indent(INDENT_INCREMENT)
-  def unindent: Unit = unindent(INDENT_INCREMENT)
+  def indent(): Unit = indent(INDENT_INCREMENT)
+  def unindent(): Unit = unindent(INDENT_INCREMENT)
 
   private def _append(s: String) = {
     _flushPendingNextLine
     _stringBuilder.append(s)
   }
 
-  private def _writeIndentSpaces: Unit = 
+  private def _writeIndentSpaces(): Unit =
     _writeIndentSpaces(indentWidth)
   
-  private def _writeIndentSpaces(c: Int) =
+  private def _writeIndentSpaces(c: Int): Unit =
     for( i <- 1 to c)
       _append(" ")
 
-  def nextLine = {
+  def nextLine() = {
     _append("\n")
-    _writeIndentSpaces
+    _writeIndentSpaces()
   }
 
   private var _lazyPendingLine: Option[() => Unit] = None
 
-  def pushPendingNextLine =
-   _lazyPendingLine = Some(()=> nextLine)
+  def pushPendingNextLine() =
+   _lazyPendingLine = Some(()=> nextLine())
 
-  private def _flushPendingNextLine =
-    if(_lazyPendingLine != None)  {
+  private def _flushPendingNextLine() =
+    if(_lazyPendingLine.isDefined)  {
       val pl = _lazyPendingLine
       _lazyPendingLine = None
       val lpl = pl.get
       lpl()
    }
   
-  def writeLines(s: String*) = {
+  def writeLines(s: String*): Unit = {
     val size = s.size
     val c = 1
 
     for(l <- s) {
       _append(l)
       if(c < size)
-        nextLine
+        nextLine()
     }
   }
 
-  def writeLinesWithSeparator(s: Iterable[String], separator: String) = {
+  def writeLinesWithSeparator(s: Iterable[String], separator: String): Unit = {
     val size = s.size
     var c = 1
     for(l <- s) {
       _append(l)
       if(c < size)
         _append(separator)
-      nextLine
+      nextLine()
       c += 1
     }
   }
 
-  def writeNodesWithSeparator(s: Iterable[ExpressionNode], separator: String, newLineAfterSeparator: Boolean) = {
+  def writeNodesWithSeparator(s: Iterable[ExpressionNode], separator: String, newLineAfterSeparator: Boolean): Unit = {
     val size = s.size
     var c = 1
     for(n <- s) {
@@ -151,25 +154,25 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
       if(c < size) {
         _append(separator)
         if(newLineAfterSeparator)
-          nextLine
+          nextLine()
       }
       c += 1
     }
   }
 
-  def write(s: String*) =
+  def write(s: String*): Unit =
     for(s0 <- s)
       _append(s0)
 
   def writeIndented(u: =>Unit): Unit =
     writeIndented(INDENT_INCREMENT, u)
 
-  def writeIndented(width: Int, u: =>Unit) = {
+  def writeIndented(width: Int, u: =>Unit): Unit = {
     indent(width)
     _writeIndentSpaces(width)
     u
     unindent(width)
   }
 
-  def quoteName(s: String) = databaseAdapter.quoteName(s)
+  def quoteName(s: String): String = databaseAdapter.quoteName(s)
 }

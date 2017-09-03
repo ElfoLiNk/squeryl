@@ -23,7 +23,7 @@ import org.squeryl.dsl.ast.SelectElement
 
 trait ResultSetUtils {
 
-  def dumpRow(rs:ResultSet) = {
+  def dumpRow(rs:ResultSet): String = {
     val md = rs.getMetaData
    (for(i <- 1 to md.getColumnCount)
       yield "#" + i + "->"+rs.getObject(i)+":"+_simpleClassName(md.getColumnClassName(i)))
@@ -38,7 +38,7 @@ trait ResultSetUtils {
       className.substring(idx + 1, className.length)
   }
 
-  def dumpRowValues(rs:ResultSet) = {
+  def dumpRowValues(rs:ResultSet): String = {
     val md = rs.getMetaData
    (for(i <- 1 to md.getColumnCount)
       yield ""+rs.getObject(i)).mkString("[",",","]")
@@ -50,7 +50,7 @@ object ResultSetUtils extends ResultSetUtils
 
 trait OutMapper[T] extends ResultSetUtils {
 
-  override def toString =
+  override def toString: String =
     Utils.failSafeString(
       "$OM(" + index + "," +
       jdbcClass.getSimpleName + ")" +
@@ -61,10 +61,10 @@ trait OutMapper[T] extends ResultSetUtils {
 
   var isActive = false
 
-  def jdbcClass =
+  def jdbcClass: Class[_] =
     sample match {
-      case Some(x:AnyRef) => x.getClass
-      case x:AnyRef  => x.getClass
+      case Some(x: Any) => x.getClass
+      case x: Any  => x.getClass
     }
 
   def map(rs: ResultSet): T =
@@ -81,20 +81,20 @@ trait OutMapper[T] extends ResultSetUtils {
     else
       sample
 
-  def isNull(rs: ResultSet) =
+  def isNull(rs: ResultSet): Boolean =
     rs.getObject(index) == null
 
   def doMap(rs: ResultSet): T
 
   def sample: T
 
-  def typeOfExpressionToString = sample.asInstanceOf[Object].getClass.getName
+  def typeOfExpressionToString: String = sample.asInstanceOf[Object].getClass.getName
 
 }
 
 object NoOpOutMapper extends OutMapper[Any] {
 
-  def doMap(rs: ResultSet) = sample
+  def doMap(rs: ResultSet): Nothing = sample
 
   def sample = throw new UnsupportedOperationException(" cannot use NoOpOutMapper")
 
@@ -113,31 +113,31 @@ class ColumnToFieldMapper(val index: Int, val fieldMetaData: FieldMetaData, sele
     }
   }
 
-  override def toString =
+  override def toString: String =
     "$(" + index + "->" + fieldMetaData + ")"
 }
 
 class ColumnToTupleMapper(val outMappers: Array[OutMapper[_]]) {
 
-  override def toString = outMappers.mkString("(",",",")") 
+  override def toString: String = outMappers.mkString("(",",",")")
 
-  def typeOfExpressionToString(idx: Int) = outMappers.apply(idx).typeOfExpressionToString
+  def typeOfExpressionToString(idx: Int): String = outMappers.apply(idx).typeOfExpressionToString
 
-  def activate(i: Int, jdbcIndex: Int) = {
+  def activate(i: Int, jdbcIndex: Int): Unit = {
     val m = outMappers.apply(i)
     m.isActive = true
     m.index = jdbcIndex
   }
 
-  def isActive(i: Int) = outMappers.apply(i).isActive
+  def isActive(i: Int): Boolean = outMappers.apply(i).isActive
 
-  def isNull(i:Int, rs: ResultSet) = outMappers.apply(i).isNull(rs)
+  def isNull(i:Int, rs: ResultSet): Boolean = outMappers.apply(i).isNull(rs)
   
   def mapToTuple[T](rs: ResultSet): T = {
-    val size = outMappers.size
+    val size = outMappers.length
     val m = outMappers
     val res = size match {
-      case 1 => (m(0).map(rs))
+      case 1 => m(0).map(rs)
       case 2 => (m(0).map(rs), m(1).map(rs))
       case 3 => (m(0).map(rs), m(1).map(rs), m(2).map(rs))
       case 4 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs))
@@ -145,7 +145,7 @@ class ColumnToTupleMapper(val outMappers: Array[OutMapper[_]]) {
       case 6 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs))
       case 7 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs))
       case 8 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs))
-      case 9 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs))
+      case 9 => (m(0) map rs, m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs))
       case 10 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs), m(9).map(rs))
       case 11 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs), m(9).map(rs), m(10).map(rs))
       case 12 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs), m(9).map(rs), m(10).map(rs), m(11).map(rs))
@@ -160,7 +160,7 @@ class ColumnToTupleMapper(val outMappers: Array[OutMapper[_]]) {
       case 21 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs), m(9).map(rs), m(10).map(rs), m(11).map(rs), m(12).map(rs), m(13).map(rs), m(14).map(rs), m(15).map(rs), m(16).map(rs), m(17).map(rs), m(18).map(rs), m(19).map(rs), m(20).map(rs))
       case 22 => (m(0).map(rs), m(1).map(rs), m(2).map(rs), m(3).map(rs), m(4).map(rs), m(5).map(rs), m(6).map(rs), m(7).map(rs), m(8).map(rs), m(9).map(rs), m(10).map(rs), m(11).map(rs), m(12).map(rs), m(13).map(rs), m(14).map(rs), m(15).map(rs), m(16).map(rs), m(17).map(rs), m(18).map(rs), m(19).map(rs), m(20).map(rs), m(21).map(rs))
 
-      case z:Any => org.squeryl.internals.Utils.throwError("tuples of size "+size+" and greater are not supported")
+      case _test:Any => org.squeryl.internals.Utils.throwError("tuples of size "+size+" and greater are not supported")
     }
     
     res.asInstanceOf[T]
@@ -183,7 +183,7 @@ class ResultSetMapper extends ResultSetUtils {
 
   var isActive = false
 
-  override def toString =
+  override def toString: String =
     'ResultSetMapper + ":" + Integer.toHexString(System.identityHashCode(this)) +
      _fieldMapper.mkString("(",",",")") +
     "-" + groupKeysMapper.getOrElse("") +
@@ -191,10 +191,10 @@ class ResultSetMapper extends ResultSetUtils {
     (if(isActive) "*" else "")
 
 
-  def addColumnMapper(cm: ColumnToFieldMapper) =
+  def addColumnMapper(cm: ColumnToFieldMapper): Unit =
     _fieldMapper.append(cm)
 
-  def addYieldValuePusher(yvp: YieldValuePusher) =
+  def addYieldValuePusher(yvp: YieldValuePusher): Unit =
     _yieldValuePushers.append(yvp)
 
   def pushYieldedValues(resultSet: ResultSet):Unit = {
@@ -213,7 +213,7 @@ class ResultSetMapper extends ResultSetUtils {
 
     //decide based on the nullity of the first non Option field :
 
-    if(_firstNonOption != None) {
+    if(_firstNonOption.isDefined) {
       return rs.getObject(_firstNonOption.get.index) == null
     }
 
@@ -225,7 +225,7 @@ class ResultSetMapper extends ResultSetUtils {
     }
 
     //outMappers
-    for(col2TupleMapper <- List(groupKeysMapper, groupMeasuresMapper).filter(_ != None).map(_.get);
+    for(col2TupleMapper <- List(groupKeysMapper, groupMeasuresMapper).filter(_.isDefined).map(_.get);
         outMapper <- col2TupleMapper.outMappers) {
 
       if(outMapper.isActive && rs.getObject(outMapper.index) != null)
@@ -248,9 +248,8 @@ class ResultSetMapper extends ResultSetUtils {
         fm.map(o, resultSet)      
     }
     catch {
-      case e:Exception=> {
+      case e:Exception=>
         throw new RuntimeException("could not map row :\n" + dumpRow(resultSet) + "\n with mapper :\n" + this, e)
-      }
     }
   }
 }
@@ -261,7 +260,7 @@ class YieldValuePusher(val index: Int, val selectElement: SelectElement, mapper:
   mapper.index = index
   mapper.isActive = true
 
-  def push(rs: ResultSet) = {
+  def push(rs: ResultSet): Unit = {
 
     if(selectElement.isActive) {
       val v = mapper.map(rs)
@@ -270,7 +269,7 @@ class YieldValuePusher(val index: Int, val selectElement: SelectElement, mapper:
   }
 
 
-  override def toString =
+  override def toString: String =
     "$(" + index + "->&("+selectElement.writeToString+")" +
     (if(mapper.isActive) "*" else "")
 }

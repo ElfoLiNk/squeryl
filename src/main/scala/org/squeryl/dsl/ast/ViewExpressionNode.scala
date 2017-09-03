@@ -15,14 +15,15 @@
  ***************************************************************************** */
 package org.squeryl.dsl.ast
 
-import collection.mutable.HashMap
-import org.squeryl.internals.{StatementWriter, ResultSetMapper, FieldMetaData}
+import org.squeryl.internals.{FieldMetaData, ResultSetMapper, StatementWriter}
 import org.squeryl.{Session, View}
+
+import scala.collection.mutable
 
 class ViewExpressionNode[U](val view: View[U])
   extends QueryableExpressionNode {
 
-  private val _selectElements = new HashMap[FieldMetaData,SelectElement]
+  private val _selectElements = new mutable.HashMap[FieldMetaData,SelectElement]
 
   def isChild(q: QueryableExpressionNode) = false
 
@@ -39,7 +40,7 @@ class ViewExpressionNode[U](val view: View[U])
 
     val e = _selectElements.get(fmd)
     val n =
-      if(e != None)
+      if(e.isDefined)
         e.get
       else {
         val r = new FieldSelectElement(this, fmd, resultSetMapper)
@@ -62,22 +63,22 @@ class ViewExpressionNode[U](val view: View[U])
 
   val resultSetMapper = new ResultSetMapper
 
-  def alias =
+  def alias: String =
     Session.currentSession.databaseAdapter.viewAlias(this)
 
-  def owns(aSample: AnyRef) = aSample eq sample.asInstanceOf[AnyRef]
+  def owns(aSample: AnyRef): Boolean = aSample eq sample.asInstanceOf[AnyRef]
 
   private var _sample: Option[U] = None
 
-  private[squeryl] def sample_=(d:U) =
+  private[squeryl] def sample_=(d:U): Unit =
     _sample = Some(d)
 
-  def sample = _sample.get
+  def sample: U = _sample.get
 
-  def doWrite(sw: StatementWriter) =
+  def doWrite(sw: StatementWriter): Unit =
       sw.write(sw.quoteName(view.prefixedName))
 
-  override def toString = {
+  override def toString: String = {
     val sb = new java.lang.StringBuilder
     sb.append('ViewExpressionNode +"[")
     sb.append(sample)

@@ -1,6 +1,8 @@
 package org.squeryl.internals
 
+import java.sql
 import java.sql.ResultSet
+
 import org.squeryl.Session
 import org.squeryl.dsl.TypedExpressionFactory
 import org.squeryl.dsl.ArrayJdbcMapper
@@ -11,9 +13,9 @@ abstract class ArrayTEF[P, TE] extends TypedExpressionFactory[Array[P], TE] with
   def toWrappedJDBCType(element: P) : java.lang.Object
   def fromWrappedJDBCType(element: Array[java.lang.Object]) : Array[P]
   val defaultColumnLength = 1
-  def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getArray(i)
+  def extractNativeJdbcValue(rs: ResultSet, i: Int): sql.Array = rs.getArray(i)
   def convertToJdbc(v: Array[P]): java.sql.Array = {
-    val content: Array[java.lang.Object] = v.map(toWrappedJDBCType(_))
+    val content: Array[java.lang.Object] = v.map(toWrappedJDBCType)
     val s = Session.currentSession
     val con = s.connection
     var rv: java.sql.Array = null
@@ -30,7 +32,7 @@ abstract class ArrayTEF[P, TE] extends TypedExpressionFactory[Array[P], TE] with
     val s = Session.currentSession
     var rv : Array[P] = sample.take(0)
     try {
-      val obj = v.getArray();
+      val obj = v.getArray()
       rv = fromWrappedJDBCType(obj.asInstanceOf[Array[java.lang.Object]])
     } catch {
       case e: Exception => s.log("Cannot obtain array from JDBC: " + e.getMessage)

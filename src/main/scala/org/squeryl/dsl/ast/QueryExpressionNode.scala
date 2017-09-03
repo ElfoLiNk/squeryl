@@ -49,12 +49,12 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
     List(views.filter(v => ! v.inhibited),
          subQueries.filter(v => ! v.inhibited)).flatten
 
-  def isJoinForm = _queryYield.joinExpressions != Nil
+  def isJoinForm: Boolean = _queryYield.joinExpressions != Nil
 
   val (whereClause, havingClause, groupByClause, orderByClause, ctes) =
      _queryYield.queryElements
 
-  val commonTableExpressions = ctes.map { q =>
+  val commonTableExpressions: List[QueryExpressionNode[_]] = ctes.map { q =>
     q.ast match {
       case x: QueryExpressionNode[_] =>
         x
@@ -87,7 +87,7 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
       case None => throw new IllegalStateException("method cannot be called before initialization")
       case Some(p:Product) =>
         if(p.getClass.getName.startsWith("scala.Tuple")) {
-          val z = (for(i <- 0 to (p.productArity - 1)) yield p.productElement(i))
+          val z = for (i <- 0 until p.productArity) yield p.productElement(i)
           ! z.exists(o => _isPrimitiveType(o.asInstanceOf[AnyRef]))
         }
         else
@@ -98,8 +98,8 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
 
   def sample:AnyRef = _sample.get
 
-  def owns(aSample: AnyRef) = 
-    _sample != None && _sample.get.eq(aSample)
+  def owns(aSample: AnyRef): Boolean =
+    _sample.isDefined && _sample.get.eq(aSample)
   
   def getOrCreateSelectElement(fmd: FieldMetaData, forScope: QueryExpressionElements) = throw new UnsupportedOperationException("implement me")
 
@@ -114,7 +114,7 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
     sb.toString
   }
 
-  override def children =
+  override def children: List[ExpressionNode] =
     List(
       selectList.toList,
       commonTableExpressions,
@@ -131,17 +131,17 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
   def isChild(q: QueryableExpressionNode):Boolean =
     views.exists(n => n == q)
 
-  def selectDistinct = _query.selectDistinct
+  def selectDistinct: Boolean = _query.selectDistinct
 
-  def isForUpdate = _query.isForUpdate
+  def isForUpdate: Boolean = _query.isForUpdate
 
-  def page = _query.page
+  def page: Option[(Int, Int)] = _query.page
 
-  def unionIsForUpdate = _query.unionIsForUpdate
+  def unionIsForUpdate: Boolean = _query.unionIsForUpdate
 
-  def unionPage = _query.unionPage
+  def unionPage: Option[(Int, Int)] = _query.unionPage
 
-  def alias = "q" + uniqueId.get
+  def alias: String = "q" + uniqueId.get
 
   def getOrCreateAllSelectElements(forScope: QueryExpressionElements): Iterable[SelectElement] = {
     _selectList.map(se => new ExportedSelectElement(se))
@@ -149,7 +149,7 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
 
   private def hasUnionQueryOptions = unionIsForUpdate || unionPage.isDefined
 
-  def setOutExpressionNodesAndSample(sl: Iterable[SelectElement], s: AnyRef) = {
+  def setOutExpressionNodesAndSample(sl: Iterable[SelectElement], s: AnyRef): Unit = {
     _selectList = sl
     _sample = Some(s)
 
@@ -223,17 +223,17 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
 
   def selectList: Iterable[SelectElement] = _selectList
 
-  def doWrite(sw: StatementWriter) = {
-    def writeCompleteQuery = {
-      val isNotRoot = parent != None
-      val isContainedInUnion = parent map (_.isInstanceOf[UnionExpressionNode]) getOrElse (false)
+  def doWrite(sw: StatementWriter): Unit = {
+    def writeCompleteQuery(): Unit = {
+      val isNotRoot = parent.isDefined
+      val isContainedInUnion = parent exists (_.isInstanceOf[UnionExpressionNode])
 
       if((isNotRoot && ! isContainedInUnion) || hasUnionQueryOptions) {
         sw.write("(")
         sw.indent(1)
       }
 
-      if (! unionClauses.isEmpty) {
+      if (unionClauses.nonEmpty) {
         sw.write("(")
         sw.nextLine
         sw.indent(1)
@@ -241,7 +241,7 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
 
       sw.databaseAdapter.writeQuery(this, sw)
 
-      if (! unionClauses.isEmpty) {
+      if (unionClauses.nonEmpty) {
         sw.unindent(1)
         sw.write(")")
         sw.nextLine
@@ -264,9 +264,9 @@ class QueryExpressionNode[R](val _query: AbstractQuery[R],
     if (sw.databaseAdapter.supportsCommonTableExpressions) {
       cteRoot.map { r =>
         sw.databaseAdapter.writeCteReference(sw, r)
-      }.getOrElse(writeCompleteQuery)
+      }.getOrElse(writeCompleteQuery())
     } else {
-      writeCompleteQuery
+      writeCompleteQuery()
     }
   }
 }

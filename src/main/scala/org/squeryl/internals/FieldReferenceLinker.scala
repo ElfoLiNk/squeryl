@@ -49,7 +49,7 @@ object FieldReferenceLinker {
     }
   }
 
-  def pushYieldValue(v:AnyRef) = {
+  def pushYieldValue(v:AnyRef): Unit = {
     var a = _yieldValues.get
     if (a == null) {
       a = new ArrayBuffer[AnyRef]
@@ -58,7 +58,7 @@ object FieldReferenceLinker {
     a.append(v)
   }
 
-  def isYieldInspectionMode = {
+  def isYieldInspectionMode: Boolean = {
     val yi = _yieldInspectionTL.get
     if (yi != null) {
       yi.isOn
@@ -68,7 +68,7 @@ object FieldReferenceLinker {
     }
   }
 
-  def inspectedQueryExpressionNode = _yieldInspectionTL.get.queryExpressionNode
+  def inspectedQueryExpressionNode: QueryExpressionNode[_] = _yieldInspectionTL.get.queryExpressionNode
   
   private val _yieldValues = new ThreadLocal[ArrayBuffer[AnyRef]]
   
@@ -79,8 +79,8 @@ object FieldReferenceLinker {
     if (fr == null) None else fr
   }
 
-  private [squeryl] def _lastAccessedFieldReference_=(se: Option[SelectElement]) =
-    if (se == None) {
+  private [squeryl] def _lastAccessedFieldReference_=(se: Option[SelectElement]): Unit =
+    if (se.isEmpty) {
       __lastAccessedFieldReference.remove()
     } else {
       __lastAccessedFieldReference.set(se)
@@ -108,12 +108,12 @@ object FieldReferenceLinker {
     
     private val _utilizedFields = new ArrayBuffer[SelectElement]
     var _on = false
-    var queryExpressionNode: QueryExpressionNode[_] = null
-    var _resultSetMapper: ResultSetMapper = null
+    var queryExpressionNode: QueryExpressionNode[_] = _
+    var _resultSetMapper: ResultSetMapper = _
 
-    def isOn = _on
+    def isOn: Boolean = _on
 
-    def callWithoutReentrance[U](f: ()=>U) = {
+    def callWithoutReentrance[U](f: ()=>U): U = {
       val prev = _on
       _on = false
       val res = f()
@@ -121,25 +121,25 @@ object FieldReferenceLinker {
       res
     }
 
-    def addSelectElement(e: SelectElement) =
+    def addSelectElement(e: SelectElement): Unit =
       if(!e.inhibited) {
         _utilizedFields.append(e)
         e.prepareColumnMapper(_utilizedFields.size)
       }
     
-    def resultSetMapper = _resultSetMapper
+    def resultSetMapper: ResultSetMapper = _resultSetMapper
 
     private var _reentranceDepth = 0
 
-     def reentranceDepth = _reentranceDepth
+     def reentranceDepth: Int = _reentranceDepth
 
-     def incrementReentranceDepth =
+     def incrementReentranceDepth(): Unit =
        _reentranceDepth += 1
 
-     def decrementReentranceDepth =
+     def decrementReentranceDepth(): Unit =
        _reentranceDepth -= 1
 
-    def turnOn(q: QueryExpressionNode[_], rsm: ResultSetMapper) = {
+    def turnOn(q: QueryExpressionNode[_], rsm: ResultSetMapper): Unit = {
       _reentranceDepth = 0
       queryExpressionNode = q
       _on = true
@@ -153,7 +153,7 @@ object FieldReferenceLinker {
   
   private val _yieldInspectionTL = new ThreadLocal[YieldInspection]
 
-  def putLastAccessedSelectElement(e: SelectElement) = {
+  def putLastAccessedSelectElement(e: SelectElement): Unit = {
     if (isYieldInspectionMode) {
       _yieldInspectionTL.get.addSelectElement(new ExportedSelectElement(e))
     } else
@@ -186,7 +186,7 @@ object FieldReferenceLinker {
 
   def createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(c: Any, lOpt: Option[SimpleKeyLookup[_]]): LogicalBoolean = {
     val left = _takeLastAccessedUntypedFieldReference
-    val right = lOpt map (l => l.convert.asInstanceOf[Any => TypedExpression[_, _]](c)) getOrElse (new InputOnlyConstantExpressionNode(c))
+    val right = lOpt map (l => l.convert.asInstanceOf[Any => TypedExpression[_, _]](c)) getOrElse new InputOnlyConstantExpressionNode(c)
 
     new BinaryOperatorNodeLogicalBoolean(left, right, "=")
   }
@@ -199,7 +199,7 @@ object FieldReferenceLinker {
    * if (the assumption) was broken.   
    */
 
-  def determineColumnsUtilizedInYeldInvocation(q: QueryExpressionNode[_], rsm: ResultSetMapper, selectClosure: ()=>AnyRef) = {
+  def determineColumnsUtilizedInYeldInvocation(q: QueryExpressionNode[_], rsm: ResultSetMapper, selectClosure: ()=>AnyRef): (List[SelectElement], AnyRef) = {
     
     val yi = new YieldInspection
       _yieldInspectionTL.set(yi)
@@ -243,12 +243,12 @@ object FieldReferenceLinker {
 	  @volatile var _cache: Map[Class[_], Array[Field]] =
 			  Map[Class[_], Array[Field]]()
 
-	  def apply(cls: Class[_]) =
-	    _cache.get(cls) getOrElse {
-	      val declaredFields = cls.getDeclaredFields()
-	      _cache += ((cls, declaredFields))
-	      declaredFields
-	    }
+	  def apply(cls: Class[_]): Array[Field] =
+	    _cache.getOrElse(cls, {
+        val declaredFields = cls.getDeclaredFields
+        _cache += ((cls, declaredFields))
+        declaredFields
+      })
 	  
   }
 
@@ -264,7 +264,7 @@ object FieldReferenceLinker {
 				  visited.put(o,o)
 				  _populateSelectCols(yi, q, o)
 				  for(f <- _declaredFieldCache(clazz)) {
-					  f.setAccessible(true);
+					  f.setAccessible(true)
 					  val ob = f.get(o)
 					  if(!f.getName.startsWith("CGLIB$") && 
 					        !f.getType.getName.startsWith("scala.Function") && 
@@ -302,7 +302,7 @@ object FieldReferenceLinker {
   
   private class PosoPropertyAccessInterceptor(val viewExpressionNode: ViewExpressionNode[_]) extends MethodInterceptor {
 
-      def fmd4Method(m: Method) =
+      def fmd4Method(m: Method): Option[FieldMetaData] =
         viewExpressionNode.view.findFieldMetaDataForProperty(m.getName)
 
       def intercept(o: Object, m: Method, args: Array[Object], proxy: MethodProxy): Object = {
@@ -313,14 +313,14 @@ object FieldReferenceLinker {
           classOf[CompositeKey].isAssignableFrom(m.getReturnType)
 
         try {
-          if(fmd != None && yi != null)
-            yi.incrementReentranceDepth
+          if(fmd.isDefined && yi != null)
+            yi.incrementReentranceDepth()
 
           _intercept(o, m, args, proxy, fmd, yi, isComposite)
         }
         finally {
-          if(fmd != None && yi != null)
-            yi.decrementReentranceDepth
+          if(fmd.isDefined && yi != null)
+            yi.decrementReentranceDepth()
         }
       }
 
@@ -333,7 +333,7 @@ object FieldReferenceLinker {
           if(m.getName.equals("toString") && m.getParameterTypes.length == 0)
             "sample:"+viewExpressionNode.view.name+"["+Integer.toHexString(System.identityHashCode(o)) + "]"
           else
-            proxy.invokeSuper(o, args);
+            proxy.invokeSuper(o, args)
 
         if(isComposite) {
           val ck = res.asInstanceOf[CompositeKey]
@@ -342,14 +342,14 @@ object FieldReferenceLinker {
           _compositeKeyMembers.remove()
         }
 
-        if(fmd != None) {
+        if(fmd.isDefined) {
 
           if(yi != null &&  yi.reentranceDepth == 1)
             yi.addSelectElement(viewExpressionNode.getOrCreateSelectElement(fmd.get, yi.queryExpressionNode))
 
           if(_compositeKeyMembers.get == null) {
             _compositeKeyMembers.remove()
-            _lastAccessedFieldReference = Some(viewExpressionNode.getOrCreateSelectElement(fmd.get));
+            _lastAccessedFieldReference = Some(viewExpressionNode.getOrCreateSelectElement(fmd.get))
           } else
             _compositeKeyMembers.get.get.append(viewExpressionNode.getOrCreateSelectElement(fmd.get))
         }

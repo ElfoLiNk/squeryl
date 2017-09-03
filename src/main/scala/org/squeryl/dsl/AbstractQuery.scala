@@ -18,8 +18,10 @@ package org.squeryl.dsl
 import ast._
 import internal.{InnerJoinedQueryable, OuterJoinedQueryable}
 import java.sql.ResultSet
+
 import org.squeryl.internals._
-import org.squeryl.{View, Queryable, Session, Query}
+import org.squeryl._
+
 import collection.mutable.ArrayBuffer
 import org.squeryl.logging._
 import java.io.Closeable
@@ -44,7 +46,7 @@ abstract class AbstractQuery[R](
 
   val name = "query"
 
-  private def isUnionQuery = ! unions.isEmpty
+  private def isUnionQuery = unions.nonEmpty
 
   override private [squeryl] def root = __root
 
@@ -80,10 +82,10 @@ abstract class AbstractQuery[R](
     new StackTraceElement("unknown", "unknown", "unknown", -1)
   }
 
-  protected def copyUnions(u: List[(String, Query[R])]) =
-    u map (t => (t._1, t._2.copy(false, Nil)))
+  protected def copyUnions(u: List[(String, Query[R])]): List[(String, Query[R])] =
+    u map (t => (t._1, t._2.copy(asRoot = false, Nil)))
 
-  protected def buildAst(qy: QueryYield[R], subQueryables: SubQueryable[_]*) = {
+  protected def buildAst(qy: QueryYield[R], subQueryables: SubQueryable[_]*): QueryExpressionNode[R] = {
 
 
     val subQueries = new ArrayBuffer[QueryableExpressionNode]
@@ -127,7 +129,7 @@ abstract class AbstractQuery[R](
 
   def ast: QueryExpressionNode[R]
 
-  def copy(asRoot:Boolean, newUnions: List[(String, Query[R])]) = {
+  def copy(asRoot:Boolean, newUnions: List[(String, Query[R])]): AbstractQuery[R] = {
     val c = createCopy(asRoot, newUnions)
     c.selectDistinct = selectDistinct
     c.page = page
@@ -143,7 +145,7 @@ abstract class AbstractQuery[R](
 
   def createCopy(asRoot:Boolean, newUnions: List[(String, Query[R])]): AbstractQuery[R]
 
-  def dumpAst = ast.dumpAst
+  def dumpAst: String = ast.dumpAst
 
   def statement: String = _genStatement(true)
 
@@ -154,17 +156,17 @@ abstract class AbstractQuery[R](
     sw.statement
   }
 
-  def distinct = {
+  def distinct: AbstractQuery[R] = {
     if (isUnionQuery) {
       Utils.throwError("distinct is not supported on union queries")
     }
-    val c = copy(true, Nil)
-    c.selectDistinct = true;
+    val c = copy(asRoot = true, Nil)
+    c.selectDistinct = true
     c
   }
 
   def page(offset: Int, pageLength: Int): Query[R] = {
-    val c = copy(true, Nil)
+    val c = copy(asRoot = true, Nil)
     val page = Some((offset, pageLength))
     if (c.isUnionQuery)
       c.unionPage = page
@@ -173,12 +175,12 @@ abstract class AbstractQuery[R](
     c    
   }
 
-  def forUpdate = {
-    val c = copy(true, Nil)
+  def forUpdate: AbstractQuery[R] = {
+    val c = copy(asRoot = true, Nil)
     if (c.isUnionQuery)
       c.unionIsForUpdate = true
     else
-      c.isForUpdate = true;
+      c.isForUpdate = true
     c    
   }
 
@@ -188,13 +190,13 @@ abstract class AbstractQuery[R](
 
     val sw = new StatementWriter(false, _dbAdapter)
     ast.write(sw)
-    val s = Session.currentSession
-    val beforeQueryExecute = System.currentTimeMillis
+    val s: AbstractSession = Session.currentSession
+    val beforeQueryExecute: Long = System.currentTimeMillis
     val (rs, stmt) = _dbAdapter.executeQuery(s, sw)
 
     lazy val statEx = new StatementInvocationEvent(definitionSite.get, beforeQueryExecute, System.currentTimeMillis, -1, sw.statement)
 
-    if(s.statisticsListener != None)
+    if(s.statisticsListener.isDefined)
       s.statisticsListener.get.queryExecuted(statEx)
 
     s._addStatement(stmt) // if the iteration doesn't get completed, we must hang on to the statement to clean it up at session end.
@@ -206,19 +208,19 @@ abstract class AbstractQuery[R](
     var rowCount = 0
     
     def close(): Unit = {
-      stmt.close
-      rs.close
+      stmt.close()
+      rs.close()
     }
 
-    def _next = {
+    def _next(): Unit = {
       _hasNext = rs.next
 
       if(!_hasNext) {// close it since we've completed the iteration
         Utils.close(rs)
-        stmt.close
+        stmt.close()
 
-        if(s.statisticsListener != None) {
-          s.statisticsListener.get.resultSetIterationEnded(statEx.uuid, System.currentTimeMillis, rowCount, true)
+        if(s.statisticsListener.isDefined) {
+          s.statisticsListener.get.resultSetIterationEnded(statEx.uuid, System.currentTimeMillis, rowCount, iterationCompleted = true)
         }
       }
       
@@ -226,15 +228,15 @@ abstract class AbstractQuery[R](
       _nextCalled = true
     }
 
-    def hasNext = {
+    def hasNext: Boolean = {
       if(!_nextCalled)
-        _next
+        _next()
       _hasNext
     }
 
     def next: R = {
       if(!_nextCalled)
-        _next
+        _next()
       if(!_hasNext)
         throw new NoSuchElementException("next called with no rows available")
       _nextCalled = false
@@ -246,7 +248,7 @@ abstract class AbstractQuery[R](
     }
   }
 
-  override def toString = dumpAst + "\n" + _genStatement(true)
+  override def toString: String = dumpAst + "\n" + _genStatement(true)
 
   protected def createSubQueryable[U](q: Queryable[U]): SubQueryable[U] = q match {
     case v: View[_] =>
@@ -285,7 +287,7 @@ abstract class AbstractQuery[R](
      val node: QueryableExpressionNode) {
 
     def give(rs: ResultSet): U =
-      if(node.joinKind != None) {
+      if(node.joinKind.isDefined) {
         if(node.isOuterJoined) {
 
           val isNoneInOuterJoin =
@@ -299,14 +301,14 @@ abstract class AbstractQuery[R](
         else
           queryable.give(resultSetMapper, rs)
       }
-      else if((node.isRightJoined) && resultSetMapper.isNoneInOuterJoin(rs))
+      else if(node.isRightJoined && resultSetMapper.isNoneInOuterJoin(rs))
         sample
       else
         queryable.give(resultSetMapper, rs)
   }
 
   private def createUnion(kind: String, q: Query[R]): Query[R] = 
-    copy(true, List((kind, q)))
+    copy(asRoot = true, List((kind, q)))
 
   def union(q: Query[R]): Query[R] = createUnion("Union", q) 
 

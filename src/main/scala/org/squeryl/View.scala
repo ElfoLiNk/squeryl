@@ -32,19 +32,19 @@ class View[T] private [squeryl](_name: String, private[squeryl] val classOfT: Cl
 
 ////2.8.x approach for LyfeCycle events :
   private [squeryl] lazy val _callbacks =
-    schema._callbacks.get(this).getOrElse(NoOpPosoLifecycleEventListener)
+    schema._callbacks.getOrElse(this, NoOpPosoLifecycleEventListener)
 
 
-  def name = schema.tableNameFromClassName(_name)
+  def name: String = schema.tableNameFromClassName(_name)
 
   def prefix: Option[String] =
-    if(_prefix != None)
+    if(_prefix.isDefined)
       _prefix
     else
       schema.name
 
-  def prefixedName =
-    if(prefix != None)
+  def prefixedName: String =
+    if(prefix.isDefined)
       prefix.get + "." + name
     else
       name
@@ -54,8 +54,8 @@ class View[T] private [squeryl](_name: String, private[squeryl] val classOfT: Cl
    * myTable.prefixedPrefixedName("z") will yield : prefix.zMyTable
    * used for creating names for objects derived from a table, ex.: a sequence 
    */
-  def prefixedPrefixedName(s: String) =
-    if(prefix != None)
+  def prefixedPrefixedName(s: String): String =
+    if(prefix.isDefined)
       prefix.get + "." + s + name
     else
       s + name
@@ -66,7 +66,7 @@ class View[T] private [squeryl](_name: String, private[squeryl] val classOfT: Cl
 
   private [squeryl] def allFieldsMetaData: Iterable[FieldMetaData] = posoMetaData.fieldsMetaData
 
-  protected val _setPersisted =
+  protected val _setPersisted: (T) => Unit =
     if(classOf[PersistenceStatus].isAssignableFrom(classOfT))
       (t:T) => t.asInstanceOf[PersistenceStatus]._isPersisted = true
     else
@@ -85,7 +85,7 @@ class View[T] private [squeryl](_name: String, private[squeryl] val classOfT: Cl
     if(o == null)
       o = _createInstanceOfRowObject
     
-    resultSetMapper.map(o, resultSet);
+    resultSetMapper.map(o, resultSet)
     val t = o.asInstanceOf[T]
     _setPersisted(t)
     _callbacks.afterSelect(t.asInstanceOf[AnyRef]).asInstanceOf[T]
@@ -97,7 +97,7 @@ class View[T] private [squeryl](_name: String, private[squeryl] val classOfT: Cl
 
     val q = from(this)(a => dsl.where {
       FieldReferenceLinker.createEqualityExpressionWithLastAccessedFieldReferenceAndConstant(ked.getId(a), k, toCanLookup(k))
-    } select(a))
+    } select a)
 
     val it = q.iterator
 

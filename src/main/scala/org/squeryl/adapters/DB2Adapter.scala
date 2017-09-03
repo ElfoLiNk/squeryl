@@ -34,12 +34,12 @@ class DB2Adapter extends DatabaseAdapter {
 
   override def supportsUnionQueryOptions = false
 
-  override def postCreateTable(t: Table[_], printSinkWhenWriteOnlyMode: Option[String => Unit]) = {
+  override def postCreateTable(t: Table[_], printSinkWhenWriteOnlyMode: Option[String => Unit]): Unit = {
 
     val sw = new StatementWriter(false, this)
     sw.write("create sequence ", sequenceName(t), " start with 1 increment by 1 nomaxvalue")
 
-    if(printSinkWhenWriteOnlyMode == None) {
+    if(printSinkWhenWriteOnlyMode.isEmpty) {
       val st = Session.currentSession.connection.createStatement
       st.execute(sw.statement)
     }

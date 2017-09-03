@@ -106,12 +106,12 @@ class SQLiteAdapter extends DatabaseAdapter {
 
   override def supportsCommonTableExpressions = false
 
-  override def writeEndOfQueryHint(isForUpdate: () => Boolean, qen: QueryExpressionElements, sw: StatementWriter) =
+  override def writeEndOfQueryHint(isForUpdate: () => Boolean, qen: QueryExpressionElements, sw: StatementWriter): Unit =
     if(isForUpdate()) {
       sw.pushPendingNextLine
     }
 
-  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter) = {
+  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter): Unit = {
     sw.write("(")
     left.write(sw)
     sw.write(" LIKE ?)")

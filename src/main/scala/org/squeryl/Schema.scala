@@ -18,15 +18,19 @@ package org.squeryl
 import dsl._
 import ast._
 import internals._
-import reflect.{Manifest}
+
+import reflect.Manifest
 import java.sql.SQLException
 import java.io.PrintWriter
-import collection.mutable.{HashMap, HashSet, ArrayBuffer}
+
+import collection.mutable.ArrayBuffer
 import org.squeryl.internals.FieldMapper
+
+import scala.collection.mutable
 
 class Schema(implicit val fieldMapper: FieldMapper) {
 
-  protected implicit def thisSchema = this
+  protected implicit def thisSchema: Schema = this
 
   /**
    * Contains all Table[_]s in this shema, and also all ManyToManyRelation[_,_,_]s (since they are also Table[_]s
@@ -35,7 +39,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
   
   def tables: Seq[Table[_]] = _tables.toSeq
   
-  private val _tableTypes = new HashMap[Class[_], Table[_]]
+  private val _tableTypes = new mutable.HashMap[Class[_], Table[_]]
 
   private val _oneToManyRelations = new ArrayBuffer[OneToManyRelation[_,_]]
 
@@ -43,12 +47,12 @@ class Schema(implicit val fieldMapper: FieldMapper) {
 
   private val _columnGroupAttributeAssignments = new ArrayBuffer[ColumnGroupAttributeAssignment]
 
-  private [squeryl] val _namingScope = new HashSet[String] 
+  private [squeryl] val _namingScope = new mutable.HashSet[String]
 
-  private [squeryl] def _addRelation(r: OneToManyRelation[_,_]) =
+  private [squeryl] def _addRelation(r: OneToManyRelation[_,_]): Unit =
     _oneToManyRelations.append(r)
 
-  private [squeryl] def _addRelation(r: ManyToManyRelation[_,_,_]) =
+  private [squeryl] def _addRelation(r: ManyToManyRelation[_,_,_]): Unit =
     _manyToManyRelations.append(r)
 
   private def _dbAdapter = Session.currentSession.databaseAdapter
@@ -81,30 +85,30 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     _tables.filter(_.posoMetaData.clasz == c).asInstanceOf[Iterable[Table[A]]]
   }
 
-  def findAllTablesFor[A](c: Class[A]) =
+  def findAllTablesFor[A](c: Class[A]): Traversable[Table[_]] =
     _tables.filter(t => c.isAssignableFrom(t.posoMetaData.clasz)).asInstanceOf[Traversable[Table[_]]]
 
 
   object NamingConventionTransforms {
     
     @deprecated("use snakify() instead as of 0.9.5beta","0.9.5")
-    def camelCase2underScore(name: String) =
+    def camelCase2underScore(name: String): String =
       name.toList.map(c => if(c.isUpper) "_" + c else c).mkString
       
-    def snakify(name: String) =
+    def snakify(name: String): String =
       name.replaceAll("^([^A-Za-z_])", "_$1").replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2").replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase
   }
 
-  def columnNameFromPropertyName(propertyName: String) = propertyName
+  def columnNameFromPropertyName(propertyName: String): String = propertyName
 
-  def tableNameFromClassName(tableName: String) = tableName
+  def tableNameFromClassName(tableName: String): String = tableName
 
   def name: Option[String] = None
 
   /**
    * Prints the schema to standard output, it is simply : schema.printDdl(println(_))
    */
-  def printDdl: Unit = printDdl(println(_))
+  def printDdl(): Unit = printDdl(println(_))
 
   def printDdl(pw: PrintWriter): Unit = printDdl(pw.println(_))
 
@@ -163,10 +167,10 @@ class Schema(implicit val fieldMapper: FieldMapper) {
    * database instances, the method is protected in order to make it a little
    * less 'accessible'
    */
-  def drop: Unit = {
+  def drop(): Unit = {
 
     if(_dbAdapter.supportsForeignKeyConstraints)
-      _dropForeignKeyConstraints
+      _dropForeignKeyConstraints()
 
     Session.currentSession.connection.createStatement
     Session.currentSession.connection
@@ -177,14 +181,14 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     }
   }  
 
-  def create = {
-    _createTables
+  def create(): Unit = {
+    _createTables()
     if(_dbAdapter.supportsForeignKeyConstraints)
-      _declareForeignKeyConstraints
+      _declareForeignKeyConstraints()
 
-    _createConstraintsOfCompositePKs
+    _createConstraintsOfCompositePKs()
 
-    createColumnGroupConstraintsAndIndexes
+    createColumnGroupConstraintsAndIndexes()
   }
 
   private def _indexDeclarationsFor(t: Table[_]): List[String] = {
@@ -206,17 +210,17 @@ class Schema(implicit val fieldMapper: FieldMapper) {
   
     (unique, indexed) match {
       case (None,    None)                   => None
-      case (Some(_), None)                   => Some(_dbAdapter.writeIndexDeclaration(cols, None,    name, true))
-      case (None,    Some(Indexed(idxName))) => Some(_dbAdapter.writeIndexDeclaration(cols, idxName, name, false))
-      case (Some(_), Some(Indexed(idxName))) => Some(_dbAdapter.writeIndexDeclaration(cols, idxName, name, true))
+      case (Some(_), None)                   => Some(_dbAdapter.writeIndexDeclaration(cols, None,    name, isUnique = true))
+      case (None,    Some(Indexed(idxName))) => Some(_dbAdapter.writeIndexDeclaration(cols, idxName, name, isUnique = false))
+      case (Some(_), Some(Indexed(idxName))) => Some(_dbAdapter.writeIndexDeclaration(cols, idxName, name, isUnique = true))
     }
   }
   
-  def createColumnGroupConstraintsAndIndexes =
+  def createColumnGroupConstraintsAndIndexes(): Unit =
     for(statement <- _writeColumnGroupAttributeAssignments)
       _executeDdl(statement)
 
-  private def _dropForeignKeyConstraints = {
+  private def _dropForeignKeyConstraints(): Unit = {
 
     val cs = Session.currentSession
     val dba = cs.databaseAdapter
@@ -227,7 +231,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     }
   }
 
-  private def _declareForeignKeyConstraints =
+  private def _declareForeignKeyConstraints(): Unit =
     for(fk <- _foreignKeyConstraints)
       _executeDdl(fk)
 
@@ -244,7 +248,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
       case e:SQLException => throw SquerylSQLException("error executing " + statement + "\n" + e, e)
     }
     finally {
-      s.close
+      s.close()
     }
   }
   
@@ -261,7 +265,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
       )
     }
   
-  private def _createTables = {
+  private def _createTables(): Unit = {
     for(t <- _tables) {
       val sw = new StatementWriter(_dbAdapter)
       _dbAdapter.writeCreateTable(t, sw, this)
@@ -272,7 +276,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     }
   }
 
-  private def _createConstraintsOfCompositePKs =
+  private def _createConstraintsOfCompositePKs(): Unit =
     for(cpk <- _allCompositePrimaryKeys) {
       val createConstraintStmt = _dbAdapter.writeCompositePrimaryKeyConstraint(cpk._1, cpk._2)
       _executeDdl(createConstraintStmt)
@@ -350,7 +354,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     t
   }
 
-  private [squeryl] def _addTable(t:Table[_]) =
+  private [squeryl] def _addTable(t:Table[_]): Unit =
     _tables.append(t)
     
   private [squeryl] def _addTableType(typeT: Class[_], t: Table[_]) =
@@ -360,12 +364,12 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     def restrict = new ReferentialActionImpl("restrict", this)
     def cascade = new ReferentialActionImpl("cascade", this)
     def noAction = new ReferentialActionImpl("no action", this)
-    def setNull = new ReferentialActionImpl("set null", this)
+    def setNull() = new ReferentialActionImpl("set null", this)
   }
 
   class ReferentialActionImpl(token: String, ev: ReferentialEvent) extends ReferentialAction {
-    def event = ev.eventName
-    def action = token
+    def event: String = ev.eventName
+    def action: String = token
   }
   
   protected def onUpdate = new ReferentialEvent("update")
@@ -381,7 +385,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     fkd
   }
 
-  def applyDefaultForeignKeyPolicy(foreignKeyDeclaration: ForeignKeyDeclaration) =
+  def applyDefaultForeignKeyPolicy(foreignKeyDeclaration: ForeignKeyDeclaration): Unit =
     foreignKeyDeclaration.constrainReference
 
   /**
@@ -391,7 +395,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
    * default is (20,16)
    */
   
-  def defaultSizeOfBigDecimal = (20,16)
+  def defaultSizeOfBigDecimal: (Int, Int) = (20,16)
 
   /**
    * @return the default database storage (column) length for String columns for this Schema,
@@ -403,12 +407,12 @@ class Schema(implicit val fieldMapper: FieldMapper) {
   /**
    * protected since table declarations must only be done inside a Schema
    */
-  protected def declare[B](a: BaseColumnAttributeAssignment*) = a
+  protected def declare[B](a: BaseColumnAttributeAssignment*): Seq[BaseColumnAttributeAssignment] = a
 
   /**
    * protected since table declarations must only be done inside a Schema
    */  
-  protected def on[A](table: Table[A]) (declarations: A=>Seq[BaseColumnAttributeAssignment]) = {
+  protected def on[A](table: Table[A]) (declarations: A=>Seq[BaseColumnAttributeAssignment]): Unit = {
 
     if(table == null)
       org.squeryl.internals.Utils.throwError("on function called with null argument in " + this.getClass.getName +
@@ -419,10 +423,10 @@ class Schema(implicit val fieldMapper: FieldMapper) {
 
     // all fields that have a single 'is' declaration are first reset :
     for(ca <- colAss if ca.isInstanceOf[ColumnAttributeAssignment])
-      ca.clearColumnAttributes
+      ca.clearColumnAttributes()
 
     for(ca <- colAss) ca match {
-      case dva:DefaultValueAssignment    => {
+      case dva:DefaultValueAssignment    =>
 
         dva.value match {
           case x: ConstantTypedExpression[_, _] =>
@@ -431,25 +435,22 @@ class Schema(implicit val fieldMapper: FieldMapper) {
             org.squeryl.internals.Utils.throwError("error in declaration of column "+ table.prefixedName + "." + dva.left.nameOfProperty + ", " +
                 "only constant expressions are supported in 'defaultsTo' declaration")
         }
-      }
-      case caa:ColumnAttributeAssignment => {
+      case caa:ColumnAttributeAssignment =>
 
         for(ca <- caa.columnAttributes)
-          (caa.left._addColumnAttribute(ca))
+          caa.left._addColumnAttribute(ca)
 
         //don't allow a KeyedEntity.id field to not have a uniqueness constraint :
         if(ca.isIdFieldOfKeyedEntityWithoutUniquenessConstraint)
           caa.left._addColumnAttribute(primaryKey)
-      }
-      case ctaa:ColumnGroupAttributeAssignment => {
+      case ctaa:ColumnGroupAttributeAssignment =>
 
         //don't allow a KeyedEntity.id field to not have a uniqueness constraint :
         if(ca.isIdFieldOfKeyedEntityWithoutUniquenessConstraint)
           ctaa.addAttribute(primaryKey)
 
         _addColumnGroupAttributeAssignment(ctaa)
-      }
-      
+
       case a:Any => org.squeryl.internals.Utils.throwError("did not match on " + a.getClass.getName)
     }
 
@@ -465,22 +466,21 @@ class Schema(implicit val fieldMapper: FieldMapper) {
     // Validate that autoIncremented is not used on other fields than KeyedEntity[A].id :
     // since it is not yet unsupported :
     for(ca <- colAss) ca match {
-      case cga:CompositeKeyAttributeAssignment => {}
-      case caa:ColumnAttributeAssignment => {
-        for(ca <- caa.columnAttributes if ca.isInstanceOf[AutoIncremented] && !(caa.left.isIdFieldOfKeyedEntity))
+      case cga:CompositeKeyAttributeAssignment =>
+      case caa:ColumnAttributeAssignment =>
+        for(ca <- caa.columnAttributes if ca.isInstanceOf[AutoIncremented] && !caa.left.isIdFieldOfKeyedEntity)
           org.squeryl.internals.Utils.throwError("Field " + caa.left.nameOfProperty + " of table " + table.name +
                 " is declared as autoIncremented, auto increment is currently only supported on KeyedEntity[A].id")
-      }
-      case dva:Any => {}
+      case dva:Any =>
     }
   }
 
-  private def _addColumnGroupAttributeAssignment(cga: ColumnGroupAttributeAssignment) =
-    _columnGroupAttributeAssignments.append(cga);
+  private def _addColumnGroupAttributeAssignment(cga: ColumnGroupAttributeAssignment): Unit =
+    _columnGroupAttributeAssignments.append(cga)
   
-  def defaultColumnAttributesForKeyedEntityId(typeOfIdField: Class[_]) =
+  def defaultColumnAttributesForKeyedEntityId(typeOfIdField: Class[_]): Set[_ >: PrimaryKey <: AttributeValidOnNumericalColumn with Product with Serializable] =
     if(typeOfIdField.isAssignableFrom(classOf[java.lang.Long]) || typeOfIdField.isAssignableFrom(classOf[java.lang.Integer]))
-      Set(new PrimaryKey, new AutoIncremented(None))
+      Set(new PrimaryKey, AutoIncremented(None))
     else
       Set(new PrimaryKey)
   
@@ -540,7 +540,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
       .groupBy(_._1)
       .mapValues(_.map(_._2))
       .map(
-       (t:Tuple2[View[_],Seq[LifecycleEvent]]) => {
+       (t:(View[_], Seq[LifecycleEvent])) => {
          (t._1, new LifecycleEventInvoker(t._2, t._1)): (View[_],LifecycleEventInvoker)
        })
       .toMap
@@ -600,7 +600,7 @@ class Schema(implicit val fieldMapper: FieldMapper) {
    *
    * @return a instance of ActiveRecord associated to the given object.
    */
-  implicit def anyRef2ActiveTransaction[A](a: A)(implicit queryDsl: QueryDsl, m: Manifest[A]) =
+  implicit def anyRef2ActiveTransaction[A](a: A)(implicit queryDsl: QueryDsl, m: Manifest[A]): ActiveRecord[A] =
     new ActiveRecord(a, queryDsl, m)
 
   /**
@@ -610,20 +610,20 @@ class Schema(implicit val fieldMapper: FieldMapper) {
   class ActiveRecord[A](a: A, queryDsl: QueryDsl, m: Manifest[A]) {
     
     private def _performAction(action: (Table[A]) => Unit) =
-      _tableTypes get (m.runtimeClass) map { table: Table[_] =>
-        queryDsl inTransaction (action(table.asInstanceOf[Table[A]]))
+      _tableTypes get m.runtimeClass map { table: Table[_] =>
+        queryDsl inTransaction action(table.asInstanceOf[Table[A]])
       }
     
     /**
      * Same as {{{table.insert(a)}}}
      */
-    def save =
+    def save: Option[Unit] =
       _performAction(_.insert(a))
 
     /**
      * Same as {{{table.update(a)}}}
      */  
-    def update(implicit ked: KeyedEntityDef[A,_]) =
+    def update(implicit ked: KeyedEntityDef[A,_]): Option[Unit] =
       _performAction(_.update(a))
       
   }

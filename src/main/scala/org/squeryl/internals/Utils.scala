@@ -15,12 +15,12 @@
  ***************************************************************************** */
 package org.squeryl.internals
 
-import java.sql.{ResultSet, SQLException, Statement}
-import org.squeryl.dsl.boilerplate.Query1
+import java.sql.{Connection, ResultSet, SQLException, Statement}
+
 import org.squeryl.Queryable
+import org.squeryl.dsl.ast.{LogicalBoolean, QueryExpressionElements}
+import org.squeryl.dsl.boilerplate.Query1
 import org.squeryl.dsl.fsm.QueryElements
-import org.squeryl.dsl.ast.{QueryExpressionElements, LogicalBoolean}
-import java.sql.Connection
 
 object Utils {
 
@@ -30,10 +30,10 @@ object Utils {
    * and we need to log as much info as possible (i.e. put as much info as possible in the 'black box').
    * Also used to allow dumping (ex. for logging) a Query AST *before* it is completely built.
    */
-  def failSafeString(s: =>String) =
+  def failSafeString(s: =>String): String =
     _failSafeString(s _, "cannot evaluate")
 
-  def failSafeString(s: =>String, valueOnFail: String) =
+  def failSafeString(s: =>String, valueOnFail: String): String =
     _failSafeString(s _, valueOnFail)
 
   private def _failSafeString(s: ()=>String, valueOnFail: String) =
@@ -41,30 +41,30 @@ object Utils {
       s()
     }
     catch {
-      case e:Exception => valueOnFail
+      case _:Exception => valueOnFail
     }
 
-  def close(s: Statement) =
-    try {s.close}
-    catch {case e:SQLException => {}}
+  def close(s: Statement): Unit =
+    try {s.close()}
+    catch {case _:SQLException =>}
 
-  def close(rs: ResultSet) =
-    try {rs.close}
-    catch {case e:SQLException => {}}
+  def close(rs: ResultSet): Unit =
+    try {rs.close()}
+    catch {case _:SQLException =>}
 
-  def close(c: Connection) =
-    try {c.close}
-    catch {case e:SQLException => {}}
+  def close(c: Connection): Unit =
+    try {c.close()}
+    catch {case _:SQLException =>}
     
   private class DummyQueryElements[Cond](override val whereClause: Option[()=>LogicalBoolean]) extends QueryElements[Cond]
-  
-  
+
+
   private class DummyQuery[A,B](q: Queryable[A],f: A=>B, g: B=>Unit) extends Query1[A,Int](
     q,
     a => {
-      val res = f(a);
+      val res = f(a)
       g(res)
-      (new DummyQueryElements(None)).select(0)
+      new DummyQueryElements(None).select(0)
     },
     true,
     Nil)
@@ -72,7 +72,7 @@ object Utils {
   private class DummyQuery4WhereClause[A,B](q: Queryable[A],whereClause: A=>LogicalBoolean) extends Query1[A,Int](
     q,
     a => {
-      (new DummyQueryElements(Some(() => whereClause(a)))).select(0)
+      new DummyQueryElements(Some(() => whereClause(a))).select(0)
     },
     true,
     Nil)
@@ -108,21 +108,21 @@ object Utils {
 
 class IteratorConcatenation[R](first: Iterator[R], second: Iterator[R]) extends Iterator[R] {
 
-  var currentIterator = first
+  var currentIterator: Iterator[R] = first
     
-  def _hasNext =
+  def _hasNext: Boolean =
     if(currentIterator.hasNext) 
       true
-    else if(currentIterator == second)
+    else if(currentIterator sameElements second)
       false
     else {
       currentIterator = second
       currentIterator.hasNext
     }
 
-  def hasNext = _hasNext
+  def hasNext: Boolean = _hasNext
   
-  def next = {
+  def next: R = {
     _hasNext
     currentIterator.next
   }

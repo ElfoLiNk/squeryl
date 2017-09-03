@@ -31,11 +31,11 @@ object UsageProfileConsolidator {
       val (dst, src) = args.map(new java.io.File(_)).splitAt(1)
 
       val notExists = src.filterNot(_.exists)
-      if(notExists.size > 0)
+      if(notExists.length > 0)
         org.squeryl.internals.Utils.throwError("Files don't exist : \n" + notExists.mkString(",\n"))
 
 
-      Class.forName("org.h2.Driver");
+      Class.forName("org.h2.Driver")
 
       val dstDb = new Session(
         java.sql.DriverManager.getConnection("jdbc:h2:" + dst.head.getAbsolutePath, "sa", ""),
