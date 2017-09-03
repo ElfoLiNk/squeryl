@@ -292,7 +292,7 @@ class FieldMetaData(
       } else
         res
     } catch {
-      case e: IllegalArgumentException =>
+      case _: IllegalArgumentException =>
         org.squeryl.internals.Utils.throwError(wrappedFieldType.getName + " used on " + o.getClass.getName)
     }
 
@@ -465,7 +465,7 @@ object FieldMetaData {
         v match {
           case Some(None) => true
           case null       => true
-          case a: Any     => false
+          case _: Any     => false
         }
 
       if (deductionFailed) {

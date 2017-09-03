@@ -126,9 +126,9 @@ class GroupQueryYield[K](
   override def queryElements: (Option[O], Option[O], List[O], Iterable[O], Iterable[Query[_]]) =
     (whereClause, havingClause, groupByClause, orderByClause, commonTableExpressions)
 
-  class SampleGroup[K](k: K) extends Group(k) {
+  class SampleGroup[T](k: T) extends Group(k) {
 
-    override def key: K = _sTuple1ToValue(k)
+    override def key: T = _sTuple1ToValue(k)
   }
 
   override def invokeYieldForAst(
@@ -156,9 +156,9 @@ class MeasuresQueryYield[M](
   override def queryElements: (Option[O], Option[O], Iterable[O], Iterable[O], Iterable[Query[_]]) =
     (whereClause, havingClause, groupByClause, orderByClause, commonTableExpressions)
 
-  class SampleMeasures[M](m: M) extends Measures(m) {
+  class SampleMeasures[T](m: T) extends Measures(m) {
 
-    override def measures: M = _sTuple1ToValue(m)
+    override def measures: T = _sTuple1ToValue(m)
   }
 
   override def invokeYieldForAst(
@@ -183,11 +183,11 @@ class GroupWithMeasuresQueryYield[K, M](
     with OrderBySignatures[GroupWithMeasures[K, M]]
     with QueryYield[GroupWithMeasures[K, M]] {
 
-  class SampleGroupWithMeasures[K, M](k: K, m: M) extends GroupWithMeasures(k, m) {
+  class SampleGroupWithMeasures[A, B](k: A, m: B) extends GroupWithMeasures(k, m) {
 
-    override def key: K = _sTuple1ToValue(k)
+    override def key: A = _sTuple1ToValue(k)
 
-    override def measures: M = _sTuple1ToValue(m)
+    override def measures: B = _sTuple1ToValue(m)
   }
 
   override def havingClause: Option[O] =

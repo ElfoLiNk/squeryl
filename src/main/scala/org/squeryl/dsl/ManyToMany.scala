@@ -63,7 +63,7 @@ class StatefulOneToMany[M](val relation: OneToMany[M]) extends Iterable[M] {
   }
 
   def deleteAll(): Int = {
-    val r = relation.deleteAll
+    val r = relation.deleteAll()
     _buffer.clear
     r
   }

@@ -53,7 +53,7 @@ class ViewExpressionNode[U](val view: View[U]) extends QueryableExpressionNode {
   }
 
   def getOrCreateSelectElement(fmd: FieldMetaData): SelectElement =
-    getOrCreateSelectElement(fmd, false)
+    getOrCreateSelectElement(fmd, export = false)
 
   def getOrCreateSelectElement(fmd: FieldMetaData, forScope: QueryExpressionElements): SelectElement =
     getOrCreateSelectElement(fmd, !forScope.isChild(this))

@@ -69,11 +69,11 @@ class MSSQLServer extends DatabaseAdapter {
   override def writeEndOfFromHint(qen: QueryExpressionElements, sw: StatementWriter): Unit =
     if (qen.isForUpdate) {
       sw.write("with(updlock, rowlock)")
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
   override def writeConcatFunctionCall(fn: FunctionNode, sw: StatementWriter): Unit =
-    sw.writeNodesWithSeparator(fn.args, " + ", false)
+    sw.writeNodesWithSeparator(fn.args, " + ", newLineAfterSeparator = false)
 
   override def writeConcatOperator(left: ExpressionNode, right: ExpressionNode, sw: StatementWriter): Unit = {
     val binaryOpNode = new BinaryOperatorNode(left, right, "+")

@@ -46,10 +46,10 @@ class DB2Adapter extends DatabaseAdapter {
       printSinkWhenWriteOnlyMode.get.apply(sw.statement + ";")
   }
 
-  override def postDropTable(t: Table[_]) =
+  override def postDropTable(t: Table[_]): Unit =
     execFailSafeExecute("drop sequence " + sequenceName(t), e => e.getErrorCode == -204)
 
-  def sequenceName(t: Table[_]) =
+  def sequenceName(t: Table[_]): String =
     t.prefixedPrefixedName("s_")
 
   override def writeInsert[T](o: T, t: Table[T], sw: StatementWriter): Unit = {
@@ -59,7 +59,7 @@ class DB2Adapter extends DatabaseAdapter {
     val autoIncPK =
       t.posoMetaData.fieldsMetaData.find(fmd => fmd.isAutoIncremented)
 
-    if (autoIncPK == None) {
+    if (autoIncPK.isEmpty) {
       super.writeInsert(o, t, sw)
       return
     }
@@ -71,18 +71,18 @@ class DB2Adapter extends DatabaseAdapter {
       .map(fmd => writeValue(o_, fmd, sw))
       .toList
 
-    sw.write("insert into ");
-    sw.write(t.prefixedName);
-    sw.write(" (");
-    sw.write(colNames.map(fmd => fmd.columnName).mkString(", "));
-    sw.write(") values ");
-    sw.write(colVals.mkString("(", ",", ")"));
+    sw.write("insert into ")
+    sw.write(t.prefixedName)
+    sw.write(" (")
+    sw.write(colNames.map(fmd => fmd.columnName).mkString(", "))
+    sw.write(") values ")
+    sw.write(colVals.mkString("(", ",", ")"))
   }
 
-  override def writeConcatFunctionCall(fn: FunctionNode, sw: StatementWriter) =
-    sw.writeNodesWithSeparator(fn.args, " || ", false)
+  override def writeConcatFunctionCall(fn: FunctionNode, sw: StatementWriter): Unit =
+    sw.writeNodesWithSeparator(fn.args, " || ", newLineAfterSeparator = false)
 
-  override def isTableDoesNotExistException(e: SQLException) = {
+  override def isTableDoesNotExistException(e: SQLException): Boolean = {
     e.getErrorCode == -204
   }
 
@@ -90,30 +90,30 @@ class DB2Adapter extends DatabaseAdapter {
     page: () => Option[(Int, Int)],
     qen: QueryExpressionElements,
     sw: StatementWriter
-  ) = {}
+  ): Unit = {}
 
-  override def writeQuery(qen: QueryExpressionElements, sw: StatementWriter) =
-    if (qen.page == None)
+  override def writeQuery(qen: QueryExpressionElements, sw: StatementWriter): Unit =
+    if (qen.page.isEmpty)
       super.writeQuery(qen, sw)
     else {
       sw.write("select sq____1.* from (")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.write("select sq____0.*, row_number() over() as rn____")
-        sw.nextLine
+        sw.nextLine()
         sw.write("from")
-        sw.nextLine
+        sw.nextLine()
         sw.writeIndented {
           sw.write("(")
           super.writeQuery(qen, sw)
           sw.write(") sq____0")
         }
       }
-      sw.nextLine
+      sw.nextLine()
       sw.write(") sq____1")
-      sw.nextLine
+      sw.nextLine()
       sw.write("where")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.write("rn____ between ")
         val page        = qen.page.get
@@ -125,7 +125,7 @@ class DB2Adapter extends DatabaseAdapter {
       }
     }
 
-  override def writeConcatOperator(left: ExpressionNode, right: ExpressionNode, sw: StatementWriter) = {
+  override def writeConcatOperator(left: ExpressionNode, right: ExpressionNode, sw: StatementWriter): Unit = {
     sw.write("(")
     _writeConcatOperand(left, sw)
     sw.write(" ")
@@ -135,7 +135,7 @@ class DB2Adapter extends DatabaseAdapter {
     sw.write(")")
   }
 
-  private def _writeConcatOperand(e: ExpressionNode, sw: StatementWriter) = {
+  private def _writeConcatOperand(e: ExpressionNode, sw: StatementWriter): Unit = {
     if (e.isInstanceOf[ConstantTypedExpression[_, _]]) {
       val c = e.asInstanceOf[ConstantTypedExpression[Any, Any]]
       sw.write("cast(")
@@ -147,7 +147,7 @@ class DB2Adapter extends DatabaseAdapter {
       e.write(sw)
   }
 
-  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter) = {
+  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter): Unit = {
     // If you are keen enough you can implement a UDF and subclass this method to call out to it.
     // See http://www.ibm.com/developerworks/data/library/techarticle/0301stolze/0301stolze.html for how.
     throw new UnsupportedOperationException("DB2 does not support a regex scalar function")

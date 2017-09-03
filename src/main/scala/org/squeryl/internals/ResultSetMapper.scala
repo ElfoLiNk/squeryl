@@ -409,7 +409,7 @@ class ColumnToTupleMapper(val outMappers: Array[OutMapper[_]]) {
           m(21).map(rs)
         )
 
-      case _test: Any =>
+      case _: Any =>
         org.squeryl.internals.Utils.throwError("tuples of size " + size + " and greater are not supported")
     }
 

@@ -42,9 +42,9 @@ trait FieldMapper {
     // =========================== Non Numerical ===========================
 
     val stringTEF = new TypedExpressionFactory[String, TString] with PrimitiveJdbcMapper[String] {
-      val sample: String                                = "": String
-      val defaultColumnLength                           = 128
-      def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getString(i)
+      val sample: String                                        = "": String
+      val defaultColumnLength                                   = 128
+      def extractNativeJdbcValue(rs: ResultSet, i: Int): String = rs.getString(i)
     }
 
     val optionStringTEF = new TypedExpressionFactory[Option[String], TOptionString]
@@ -350,47 +350,90 @@ trait FieldMapper {
 
     val longTEF =
       new IntegralTypedExpressionFactory[Long, TLong, Double, TDouble] with PrimitiveJdbcMapper[Long] {
-        val sample                                        = 1L
-        val defaultColumnLength                           = 8
-        val floatifyer                                    = doubleTEF
-        def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getLong(i)
+        val sample              = 1L
+        val defaultColumnLength = 8
+        val floatifyer: FloatTypedExpressionFactory[Double, TDouble] with PrimitiveJdbcMapper[Double] {
+          val defaultColumnLength: Int
+
+          val sample: Double
+
+          def extractNativeJdbcValue(rs: ResultSet, i: Int): Double
+        }                                                       = doubleTEF
+        def extractNativeJdbcValue(rs: ResultSet, i: Int): Long = rs.getLong(i)
       }
 
     val optionLongTEF = new IntegralTypedExpressionFactory[Option[Long], TOptionLong, Option[Double], TOptionDouble]
     with DeOptionizer[Long, Long, TLong, Option[Long], TOptionLong] {
-      val deOptionizer = longTEF
-      val floatifyer   = optionDoubleTEF
+      val deOptionizer: IntegralTypedExpressionFactory[Long, TLong, Double, TDouble] with PrimitiveJdbcMapper[Long] {
+        val defaultColumnLength: Int
+
+        val sample: Long
+
+        val floatifyer: FloatTypedExpressionFactory[Double, TDouble] with PrimitiveJdbcMapper[Double] {
+          val sample: Double
+
+          val defaultColumnLength: Int
+
+          def extractNativeJdbcValue(rs: ResultSet, i: Int): Double
+        }
+
+        def extractNativeJdbcValue(rs: ResultSet, i: Int): Long
+      } = longTEF
+      val floatifyer
+        : FloatTypedExpressionFactory[Option[Double], TOptionDouble] with DeOptionizer[Double, Double, TDouble, Option[
+          Double
+        ], TOptionDouble] {
+          val deOptionizer: FloatTypedExpressionFactory[Double, TDouble] with PrimitiveJdbcMapper[Double] with Object {
+            val defaultColumnLength: Int
+
+            val sample: Double
+
+            def extractNativeJdbcValue(rs: ResultSet, i: Int): Double
+          }
+        } = optionDoubleTEF
     }
 
     // =========================== Numerical Floating Point ===========================
 
     val floatTEF = new FloatTypedExpressionFactory[Float, TFloat] with PrimitiveJdbcMapper[Float] {
-      val sample                                        = 1F
-      val defaultColumnLength                           = 4
-      def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getFloat(i)
+      val sample                                               = 1F
+      val defaultColumnLength                                  = 4
+      def extractNativeJdbcValue(rs: ResultSet, i: Int): Float = rs.getFloat(i)
     }
 
     val optionFloatTEF =
       new FloatTypedExpressionFactory[Option[Float], TOptionFloat]
       with DeOptionizer[Float, Float, TFloat, Option[Float], TOptionFloat] {
-        val deOptionizer = floatTEF
+        val deOptionizer: FloatTypedExpressionFactory[Float, TFloat] with PrimitiveJdbcMapper[Float] {
+          val defaultColumnLength: Int
+
+          val sample: Float
+
+          def extractNativeJdbcValue(rs: ResultSet, i: Int): Float
+        } = floatTEF
       }
 
     val doubleTEF = new FloatTypedExpressionFactory[Double, TDouble] with PrimitiveJdbcMapper[Double] {
-      val sample                                        = 1D
-      val defaultColumnLength                           = 8
-      def extractNativeJdbcValue(rs: ResultSet, i: Int) = rs.getDouble(i)
+      val sample                                                = 1D
+      val defaultColumnLength                                   = 8
+      def extractNativeJdbcValue(rs: ResultSet, i: Int): Double = rs.getDouble(i)
     }
 
     val optionDoubleTEF = new FloatTypedExpressionFactory[Option[Double], TOptionDouble]
     with DeOptionizer[Double, Double, TDouble, Option[Double], TOptionDouble] {
-      val deOptionizer = doubleTEF
+      val deOptionizer: FloatTypedExpressionFactory[Double, TDouble] with PrimitiveJdbcMapper[Double] {
+        val defaultColumnLength: Int
+
+        val sample: Double
+
+        def extractNativeJdbcValue(rs: ResultSet, i: Int): Double
+      } = doubleTEF
     }
 
     val bigDecimalTEF = new FloatTypedExpressionFactory[BigDecimal, TBigDecimal] with PrimitiveJdbcMapper[BigDecimal] {
-      val sample              = BigDecimal(1)
-      val defaultColumnLength = -1
-      def extractNativeJdbcValue(rs: ResultSet, i: Int) = {
+      val sample                   = BigDecimal(1)
+      val defaultColumnLength: Int = -1
+      def extractNativeJdbcValue(rs: ResultSet, i: Int): BigDecimal = {
         val v = rs.getBigDecimal(i)
         if (rs.wasNull())
           null
@@ -402,13 +445,19 @@ trait FieldMapper {
     val optionBigDecimalTEF =
       new FloatTypedExpressionFactory[Option[BigDecimal], TOptionBigDecimal]
       with DeOptionizer[BigDecimal, BigDecimal, TBigDecimal, Option[BigDecimal], TOptionBigDecimal] {
-        val deOptionizer = bigDecimalTEF
+        val deOptionizer: FloatTypedExpressionFactory[BigDecimal, TBigDecimal] with PrimitiveJdbcMapper[BigDecimal] {
+          val defaultColumnLength: Int
+
+          val sample: BigDecimal
+
+          def extractNativeJdbcValue(rs: ResultSet, i: Int): BigDecimal
+        } = bigDecimalTEF
       }
   }
 
-  initialize
+  initialize()
 
-  protected def initialize() = {
+  protected def initialize(): Option[FieldAttributesBasedOnType[_]] = {
     import PrimitiveTypeSupport._
 
     register(byteTEF)
@@ -440,8 +489,8 @@ trait FieldMapper {
      * in FieldMetaData.canonicalEnumerationValueFor(i: Int)
      */
     val z = new FieldAttributesBasedOnType[Any](new {
-      def map(rs: ResultSet, i: Int) = rs.getInt(i)
-      def convertToJdbc(v: AnyRef)   = v
+      def map(rs: ResultSet, i: Int): Int  = rs.getInt(i)
+      def convertToJdbc(v: AnyRef): AnyRef = v
     }, re.defaultColumnLength, re.sample, classOf[java.lang.Integer])
 
     registry.put(z.clasz, z)
@@ -454,9 +503,9 @@ trait FieldMapper {
   }
 
   protected def makeMapper(fa0: JdbcMapper[_, _]) = new {
-    val fa = fa0.asInstanceOf[JdbcMapper[AnyRef, AnyRef]]
+    val fa: JdbcMapper[AnyRef, AnyRef] = fa0.asInstanceOf[JdbcMapper[AnyRef, AnyRef]]
 
-    def map(rs: ResultSet, i: Int) = fa.map(rs, i)
+    def map(rs: ResultSet, i: Int): AnyRef = fa.map(rs, i)
 
     def convertToJdbc(v: AnyRef): AnyRef = {
       if (v != null)
@@ -474,22 +523,22 @@ trait FieldMapper {
 
     val clasz: Class[_] = sample.asInstanceOf[AnyRef].getClass
 
-    override def toString =
+    override def toString: String =
       clasz.getCanonicalName + " --> " + mapper.getClass.getCanonicalName
   }
 
-  def nativeJdbcValueFor(nonNativeType: Class[_], r: AnyRef) =
+  def nativeJdbcValueFor(nonNativeType: Class[_], r: AnyRef): AnyRef =
     get(nonNativeType).mapper.convertToJdbc(r)
 
-  def isSupported(c: Class[_]) =
-    lookup(c) != None ||
+  def isSupported(c: Class[_]): Boolean =
+    lookup(c).isDefined ||
       c.isAssignableFrom(classOf[Some[_]]) ||
       classOf[Product1[Any]].isAssignableFrom(c)
 
-  def defaultColumnLength(c: Class[_]) =
+  def defaultColumnLength(c: Class[_]): Int =
     get(c).defaultLength
 
-  def nativeJdbcTypeFor(c: Class[_]) =
+  def nativeJdbcTypeFor(c: Class[_]): Class[_] =
     get(c).nativeJdbcType
 
   def resultSetHandlerFor(c: Class[_]): (ResultSet, Int) => AnyRef = {
@@ -528,7 +577,7 @@ trait FieldMapper {
 
     val wasThere = registry.put(z.clasz, z)
 
-    if (wasThere != None)
+    if (wasThere.isDefined)
       Utils.throwError("field type " + z.clasz + " already registered, handled by " + m.getClass.getCanonicalName)
   }
 
@@ -538,7 +587,7 @@ trait FieldMapper {
 
     val wasThere = registry.put(z.clasz, z)
 
-    if (wasThere != None)
+    if (wasThere.isDefined)
       Utils.throwError("field type " + z.clasz + " already registered, handled by " + m.getClass.getCanonicalName)
   }
 

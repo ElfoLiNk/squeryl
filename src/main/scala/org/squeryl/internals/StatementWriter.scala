@@ -94,7 +94,7 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
   def unindent(): Unit = unindent(INDENT_INCREMENT)
 
   private def _append(s: String) = {
-    _flushPendingNextLine
+    _flushPendingNextLine()
     _stringBuilder.append(s)
   }
 
@@ -105,17 +105,17 @@ class StatementWriter(val isForDisplay: Boolean, val databaseAdapter: DatabaseAd
     for (i <- 1 to c)
       _append(" ")
 
-  def nextLine() = {
+  def nextLine(): Unit = {
     _append("\n")
     _writeIndentSpaces()
   }
 
   private var _lazyPendingLine: Option[() => Unit] = None
 
-  def pushPendingNextLine() =
+  def pushPendingNextLine(): Unit =
     _lazyPendingLine = Some(() => nextLine())
 
-  private def _flushPendingNextLine() =
+  private def _flushPendingNextLine(): Unit =
     if (_lazyPendingLine.isDefined) {
       val pl = _lazyPendingLine
       _lazyPendingLine = None

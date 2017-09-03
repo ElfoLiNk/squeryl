@@ -15,7 +15,7 @@
  ***************************************************************************** */
 package org.squeryl.dsl.boilerplate
 
-import org.squeryl.dsl.{ QueryYield }
+import org.squeryl.dsl.QueryYield
 import org.squeryl.dsl.internal.{ InnerJoinedQueryable, JoinedQueryable, OuterJoinedQueryable }
 import org.squeryl.{ Query, Queryable }
 

@@ -77,7 +77,7 @@ trait DatabaseAdapter {
         if (!z.isLast) {
           sw.write(",")
         }
-        sw.nextLine
+        sw.nextLine()
       }
     }
 
@@ -88,13 +88,13 @@ trait DatabaseAdapter {
     if (qen.selectDistinct)
       sw.write(" distinct")
 
-    sw.nextLine
+    sw.nextLine()
     sw.writeIndented {
       sw.writeNodesWithSeparator(qen.selectList.filter(e => !e.inhibited), ",", newLineAfterSeparator = true)
     }
-    sw.nextLine
+    sw.nextLine()
     sw.write("From")
-    sw.nextLine
+    sw.nextLine()
 
     if (!qen.isJoinForm) {
       sw.writeIndented {
@@ -104,10 +104,10 @@ trait DatabaseAdapter {
           sw.write(sw.quoteName(z.element.alias))
           if (!z.isLast) {
             sw.write(",")
-            sw.nextLine
+            sw.nextLine()
           }
         }
-        sw.pushPendingNextLine
+        sw.pushPendingNextLine()
       }
     } else {
       val singleNonJoinTableExpression =
@@ -121,13 +121,13 @@ trait DatabaseAdapter {
       firstJoinExpr.write(sw)
       sw.write(" ")
       sw.write(sw.quoteName(firstJoinExpr.alias))
-      sw.nextLine
+      sw.nextLine()
 
       for (z <- restOfJoinExpr.zipi) {
         writeJoin(z.element, sw)
         if (z.isLast)
-          sw.unindent
-        sw.pushPendingNextLine
+          sw.unindent()
+        sw.pushPendingNextLine()
       }
     }
 
@@ -135,34 +135,34 @@ trait DatabaseAdapter {
 
     if (qen.hasUnInhibitedWhereClause) {
       sw.write("Where")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         qen.whereClause.get.write(sw)
       }
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
     if (qen.groupByClause.exists(e => !e.inhibited)) {
       sw.write("Group By")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.writeNodesWithSeparator(qen.groupByClause.filter(e => !e.inhibited), ",", newLineAfterSeparator = true)
       }
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
     if (qen.havingClause.exists(e => !e.inhibited)) {
       sw.write("Having")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.writeNodesWithSeparator(qen.havingClause.filter(e => !e.inhibited), ",", newLineAfterSeparator = true)
       }
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
     if (qen.orderByClause.exists(e => !e.inhibited)) {
       sw.write("Order By")
-      sw.nextLine
+      sw.nextLine()
       val ob0 = qen.orderByClause.filter(e => !e.inhibited)
       val ob =
         if (inverseOrderBy) ob0.map(_.asInstanceOf[OrderByExpression].inverse)
@@ -170,7 +170,7 @@ trait DatabaseAdapter {
       sw.writeIndented {
         sw.writeNodesWithSeparator(ob, ",", newLineAfterSeparator = true)
       }
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
     writePaginatedQueryDeclaration(() => qen.page, qen, sw)
@@ -189,7 +189,7 @@ trait DatabaseAdapter {
   def writeEndOfQueryHint(isForUpdate: () => Boolean, qen: QueryExpressionElements, sw: StatementWriter): Unit =
     if (isForUpdate()) {
       sw.write("for update")
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
   def writeEndOfFromHint(qen: QueryExpressionElements, sw: StatementWriter): Unit = {}
@@ -204,7 +204,7 @@ trait DatabaseAdapter {
       sw.write(p._2.toString)
       sw.write(" offset ")
       sw.write(p._1.toString)
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     })
 
   def writeJoin(queryableExpressionNode: QueryableExpressionNode, sw: StatementWriter): Unit = {
@@ -571,8 +571,8 @@ trait DatabaseAdapter {
     val o_ = o.asInstanceOf[AnyRef]
 
     sw.write("update ", quoteName(t.prefixedName), " set ")
-    sw.nextLine
-    sw.indent
+    sw.nextLine()
+    sw.indent()
     sw.writeLinesWithSeparator(
       t.posoMetaData.fieldsMetaData
         .filter(fmd => !fmd.isIdFieldOfKeyedEntity && fmd.isUpdatable)
@@ -584,10 +584,10 @@ trait DatabaseAdapter {
         }),
       ","
     )
-    sw.unindent
+    sw.unindent()
     sw.write("where")
-    sw.nextLine
-    sw.indent
+    sw.nextLine()
+    sw.indent()
 
     t.posoMetaData.primaryKey
       .getOrElse(
@@ -639,9 +639,9 @@ trait DatabaseAdapter {
     sw.write("delete from ")
     sw.write(quoteName(t.prefixedName))
     if (whereClause.isDefined) {
-      sw.nextLine
+      sw.nextLine()
       sw.write("where")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         whereClause.get.write(sw)
       }
@@ -673,8 +673,8 @@ trait DatabaseAdapter {
     sw.write("update ")
     sw.write(quoteName(t.prefixedName))
     sw.write(" set")
-    sw.indent
-    sw.nextLine
+    sw.indent()
+    sw.nextLine()
     for (z <- us.values.zipi) {
       val col = colsToUpdate.next
       sw.write(quoteName(col.columnName))
@@ -692,25 +692,25 @@ trait DatabaseAdapter {
       }
       if (!z.isLast) {
         sw.write(",")
-        sw.nextLine
+        sw.nextLine()
       }
     }
 
     if (t.posoMetaData.isOptimistic) {
       sw.write(",")
-      sw.nextLine
+      sw.nextLine()
       val occ = t.posoMetaData.optimisticCounter.get
       sw.write(quoteName(occ.columnName))
       sw.write(" = ")
       sw.write(quoteName(occ.columnName) + " + 1")
     }
 
-    sw.unindent
+    sw.unindent()
 
     if (us.whereClause.isDefined) {
-      sw.nextLine
+      sw.nextLine()
       sw.write("Where")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         us.whereClause.get.write(sw)
       }

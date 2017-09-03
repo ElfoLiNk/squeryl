@@ -106,7 +106,7 @@ class QueryExpressionNode[R](
   def getOrCreateSelectElement(fmd: FieldMetaData, forScope: QueryExpressionElements) =
     throw new UnsupportedOperationException("implement me")
 
-  override def toString = {
+  override def toString: String = {
     val sb = new java.lang.StringBuilder
     sb.append('QueryExpressionNode + "[")
     if (_query.isRoot)
@@ -237,7 +237,7 @@ class QueryExpressionNode[R](
 
       if (unionClauses.nonEmpty) {
         sw.write("(")
-        sw.nextLine
+        sw.nextLine()
         sw.indent(1)
       }
 
@@ -246,7 +246,7 @@ class QueryExpressionNode[R](
       if (unionClauses.nonEmpty) {
         sw.unindent(1)
         sw.write(")")
-        sw.nextLine
+        sw.nextLine()
       }
 
       unionClauses.foreach { u =>

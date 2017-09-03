@@ -112,7 +112,7 @@ class SQLiteAdapter extends DatabaseAdapter {
     sw: StatementWriter
   ): Unit =
     if (isForUpdate()) {
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     }
 
   override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter): Unit = {

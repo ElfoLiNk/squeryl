@@ -205,8 +205,8 @@ abstract class AbstractQuery[R](
     s._addStatement(stmt) // if the iteration doesn't get completed, we must hang on to the statement to clean it up at session end.
     s._addResultSet(rs)   // same for the result set
 
-    var _nextCalled = false;
-    var _hasNext    = false;
+    var _nextCalled = false
+    var _hasNext    = false
 
     var rowCount = 0
 
@@ -285,7 +285,7 @@ abstract class AbstractQuery[R](
       case dq: DelegateQuery[_] =>
         createSubQueryable(dq.q)
       case qr: AbstractQuery[U] =>
-        val copy = qr.copy(false, Nil)
+        val copy = qr.copy(asRoot = false, Nil)
         new SubQueryable(copy, copy.ast.sample.asInstanceOf[U], copy.resultSetMapper, true, copy.ast)
     }
 

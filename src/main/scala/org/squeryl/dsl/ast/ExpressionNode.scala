@@ -182,7 +182,7 @@ class BinaryOperatorNodeLogicalBoolean(
     if (nonInh.hasNext) {
       sw.write(operatorToken)
       if (newLineAfterOperator)
-        sw.nextLine
+        sw.nextLine()
       sw.write(" ")
 
       if (rightArgInParent)
@@ -306,7 +306,7 @@ class ColumnGroupAttributeAssignment(cols: Seq[FieldMetaData], columnAttributes_
   def addAttribute(a: ColumnAttribute): Unit =
     _columnAttributes.append(a)
 
-  def clearColumnAttributes(): Unit = columns.foreach(_._clearColumnAttributes)
+  def clearColumnAttributes(): Unit = columns.foreach(_._clearColumnAttributes())
 
   def columns: Seq[FieldMetaData] = cols
 
@@ -332,7 +332,7 @@ class CompositeKeyAttributeAssignment(val group: CompositeKey, _columnAttributes
 class ColumnAttributeAssignment(val left: FieldMetaData, val columnAttributes: Seq[ColumnAttribute])
     extends BaseColumnAttributeAssignment {
 
-  def clearColumnAttributes(): Unit = left._clearColumnAttributes
+  def clearColumnAttributes(): Unit = left._clearColumnAttributes()
 
   def isIdFieldOfKeyedEntity: Boolean = left.isIdFieldOfKeyedEntity
 }
@@ -342,7 +342,7 @@ class DefaultValueAssignment(val left: FieldMetaData, val value: TypedExpression
 
   def isIdFieldOfKeyedEntity: Boolean = left.isIdFieldOfKeyedEntity
 
-  def clearColumnAttributes(): Unit = left._clearColumnAttributes
+  def clearColumnAttributes(): Unit = left._clearColumnAttributes()
 
   def columnAttributes: Nil.type = Nil
 }
@@ -468,7 +468,7 @@ class BinaryOperatorNode(
     sw.write(" ")
     sw.write(operatorToken)
     if (newLineAfterOperator)
-      sw.nextLine
+      sw.nextLine()
     sw.write(" ")
     right.write(sw)
     sw.write(")")
@@ -492,7 +492,7 @@ class PrefixOperatorNode(
     sw.write("(")
     sw.write(operatorToken)
     if (newLineAfterOperator)
-      sw.nextLine
+      sw.nextLine()
     child.write(sw)
     sw.write(")")
   }
@@ -657,14 +657,14 @@ class RightHandSideOfIn[A](val ast: ExpressionNode, val isIn: Option[Boolean] = 
 class UnionExpressionNode(val kind: String, val ast: ExpressionNode) extends ExpressionNode {
   def doWrite(sw: StatementWriter): Unit = {
     sw.write(kind)
-    sw.nextLine
+    sw.nextLine()
     sw.write("(")
-    sw.nextLine
+    sw.nextLine()
     sw.indent(1)
     ast.write(sw)
     sw.unindent(1)
     sw.write(")")
-    sw.nextLine
+    sw.nextLine()
   }
 
   override def toString: String = {

@@ -6,14 +6,14 @@ import org.squeryl.InternalFieldMapper._
 
 object LocalH2SinkStatisticsListener {
 
-  def initializeOverwrite(schemaName: String, workingDir: String = ".") =
-    initialize(schemaName, true, workingDir)
+  def initializeOverwrite(schemaName: String, workingDir: String = "."): LocalH2SinkStatisticsListener =
+    initialize(schemaName, overwrite = true, workingDir)
 
-  def initializeAppend(schemaName: String, workingDir: String = ".") =
-    initialize(schemaName, false, workingDir)
+  def initializeAppend(schemaName: String, workingDir: String = "."): LocalH2SinkStatisticsListener =
+    initialize(schemaName, overwrite = false, workingDir)
 
-  def initialize(schemaName: String, overwrite: Boolean, workingDir: String) = {
-    Class.forName("org.h2.Driver");
+  def initialize(schemaName: String, overwrite: Boolean, workingDir: String): LocalH2SinkStatisticsListener = {
+    Class.forName("org.h2.Driver")
 
     val file =
       new java.io.File(workingDir, schemaName + ".h2.db").getCanonicalFile
@@ -29,7 +29,7 @@ object LocalH2SinkStatisticsListener {
 
     if ((!file.exists) || overwrite)
       using(s) {
-        StatsSchema.create
+        StatsSchema.create()
       }
 
     val l = new LocalH2SinkStatisticsListener(s)
@@ -47,7 +47,7 @@ class LocalH2SinkStatisticsListener(val h2Session: AbstractSession) extends Stat
   private val _worker = new Thread {
 
     override def run(): Unit = {
-      h2Session.bindToCurrentThread
+      h2Session.bindToCurrentThread()
       while (!_closed) {
         val op = _queue.take
         op()

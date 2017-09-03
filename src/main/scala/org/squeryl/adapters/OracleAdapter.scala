@@ -133,23 +133,23 @@ class OracleAdapter extends DatabaseAdapter {
       super.writeQuery(qen, sw)
     else {
       sw.write("select sq____1.* from (")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.write("select sq____0.*, rownum as rn____")
-        sw.nextLine
+        sw.nextLine()
         sw.write("from")
-        sw.nextLine
+        sw.nextLine()
         sw.writeIndented {
           sw.write("(")
           super.writeQuery(qen, sw)
           sw.write(") sq____0")
         }
       }
-      sw.nextLine
+      sw.nextLine()
       sw.write(") sq____1")
-      sw.nextLine
+      sw.nextLine()
       sw.write("where")
-      sw.nextLine
+      sw.nextLine()
       sw.writeIndented {
         sw.write("rn____ between ")
         val page        = qen.page.get
@@ -203,7 +203,7 @@ class OracleAdapter extends DatabaseAdapter {
       else
         s
     } catch {
-      case e: CouldNotShrinkIdentifierException =>
+      case _: CouldNotShrinkIdentifierException =>
         org.squeryl.internals.Utils
           .throwError("could not make a unique identifier with '" + s + "'")
     }

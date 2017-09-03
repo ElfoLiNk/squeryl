@@ -18,7 +18,7 @@ package org.squeryl
 import dsl.ast._
 import dsl.{ CompositeKey, QueryDsl }
 import internals._
-import java.sql.{ Statement }
+import java.sql.Statement
 import logging.StackMarker
 import collection.mutable.ArrayBuffer
 
@@ -47,13 +47,13 @@ class Table[T] private[squeryl] (
 
     val st =
       (_dbAdapter.supportsAutoIncrementInColumnDeclaration, posoMetaData.primaryKey) match {
-        case (true, a: Any) =>
+        case (true, _) =>
           sess.connection.prepareStatement(sw.statement, Statement.RETURN_GENERATED_KEYS)
         case (false, Some(Left(pk: FieldMetaData))) =>
           val autoIncPk = new Array[String](1)
           autoIncPk(0) = pk.columnName
           sess.connection.prepareStatement(sw.statement, autoIncPk)
-        case a: Any => sess.connection.prepareStatement(sw.statement)
+        case _: Any => sess.connection.prepareStatement(sw.statement)
       }
 
     try {
@@ -78,7 +78,7 @@ class Table[T] private[squeryl] (
               rs.close()
             }
           }
-        case a: Any =>
+        case _: Any =>
       }
     } finally {
       st.close()

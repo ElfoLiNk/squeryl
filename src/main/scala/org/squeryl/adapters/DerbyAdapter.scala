@@ -55,22 +55,22 @@ class DerbyAdapter extends DatabaseAdapter {
     page: () => Option[(Int, Int)],
     qen: QueryExpressionElements,
     sw: StatementWriter
-  ) = {
+  ): Unit = {
     page().foreach(p => {
       sw.write("offset ")
       sw.write(p._1.toString)
       sw.write(" rows fetch next ")
       sw.write(p._2.toString)
       sw.write("rows only")
-      sw.pushPendingNextLine
+      sw.pushPendingNextLine()
     })
   }
 
-  override def isTableDoesNotExistException(e: SQLException) =
+  override def isTableDoesNotExistException(e: SQLException): Boolean =
     e.getSQLState == "42Y55"
 
-  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter) =
+  override def writeRegexExpression(left: ExpressionNode, pattern: String, sw: StatementWriter): Unit =
     throw new UnsupportedOperationException("Derby does not support a regex scalar function")
 
-  override def quoteIdentifier(s: String) = "\"" + s + "\""
+  override def quoteIdentifier(s: String): String = "\"" + s + "\""
 }
