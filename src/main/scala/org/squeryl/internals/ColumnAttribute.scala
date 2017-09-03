@@ -15,63 +15,72 @@
  ***************************************************************************** */
 package org.squeryl.internals
 
-
 trait ColumnAttribute
 trait MultipleColumnAttribute
 
-trait AttributeValidOnMultipleColumn extends ColumnAttribute
-trait AttributeValidOnNumericalColumn extends ColumnAttribute
+trait AttributeValidOnMultipleColumn     extends ColumnAttribute
+trait AttributeValidOnNumericalColumn    extends ColumnAttribute
 trait AttributeValidOnNonNumericalColumn extends ColumnAttribute
 
-case class Unique() extends ColumnAttribute with MultipleColumnAttribute
-  with AttributeValidOnNonNumericalColumn
-  with AttributeValidOnNumericalColumn
-  with AttributeValidOnMultipleColumn
+case class Unique()
+    extends ColumnAttribute
+    with MultipleColumnAttribute
+    with AttributeValidOnNonNumericalColumn
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnMultipleColumn
 
-case class AutoIncremented(var nameOfSequence: Option[String]) extends ColumnAttribute
-  with AttributeValidOnNumericalColumn {
+case class AutoIncremented(var nameOfSequence: Option[String])
+    extends ColumnAttribute
+    with AttributeValidOnNumericalColumn {
 
   override def hashCode: Int = this.getClass.hashCode
-  
+
   override def equals(any: Any): Boolean =
     any.isInstanceOf[AutoIncremented]
 }
 
-case class Indexed(nameOfIndex: Option[String]) extends ColumnAttribute with MultipleColumnAttribute
-        with AttributeValidOnNonNumericalColumn
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnMultipleColumn
+case class Indexed(nameOfIndex: Option[String])
+    extends ColumnAttribute
+    with MultipleColumnAttribute
+    with AttributeValidOnNonNumericalColumn
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnMultipleColumn
 
-case class PrimaryKey() extends ColumnAttribute
-        with AttributeValidOnNonNumericalColumn
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnMultipleColumn
+case class PrimaryKey()
+    extends ColumnAttribute
+    with AttributeValidOnNonNumericalColumn
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnMultipleColumn
 
-case class DBType(declaration: String, explicit: Boolean = false) extends ColumnAttribute
-  with AttributeValidOnNonNumericalColumn
-  with AttributeValidOnNumericalColumn {
+case class DBType(declaration: String, explicit: Boolean = false)
+    extends ColumnAttribute
+    with AttributeValidOnNonNumericalColumn
+    with AttributeValidOnNumericalColumn {
   def explicitCast: DBType = copy(explicit = true)
 }
 
 /**
  * Flag column as not accepting values on INSERT
  */
-case class Uninsertable() extends ColumnAttribute
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnNonNumericalColumn
+case class Uninsertable()
+    extends ColumnAttribute
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnNonNumericalColumn
+
 /**
  * Flag column as not accepting values on UPDATE
  */
-case class Unupdatable() extends ColumnAttribute
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnNonNumericalColumn
+case class Unupdatable()
+    extends ColumnAttribute
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnNonNumericalColumn
 
+case class Named(name: String)
+    extends ColumnAttribute
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnNonNumericalColumn
 
-case class Named(name: String) extends ColumnAttribute
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnNonNumericalColumn        
-        
-case class IsTransient() extends ColumnAttribute
-        with AttributeValidOnNumericalColumn
-        with AttributeValidOnNonNumericalColumn
-        
+case class IsTransient()
+    extends ColumnAttribute
+    with AttributeValidOnNumericalColumn
+    with AttributeValidOnNonNumericalColumn

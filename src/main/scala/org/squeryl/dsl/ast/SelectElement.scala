@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2010 Maxime Lévesque
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,10 +33,11 @@ import scala.annotation.tailrec
  *  ExportSelectElement for a select element that refers to a SelectElement of an inner or outer query.
  *
  * SelectElementReference are nodes in any clause other than select (where, having, composite expression, order by, etc)
- *  that refer to a SelectElement  
+ *  that refer to a SelectElement
  */
 trait SelectElement extends ExpressionNode {
   outer =>
+
   /**
    * <pre>
    * In the following select :
@@ -52,10 +53,11 @@ trait SelectElement extends ExpressionNode {
    *     (select t.x as z1 from t) q
    *
    * </pre>
-   */  
+   */
   def origin: QueryableExpressionNode
 
-  def parentQueryable: QueryableExpressionNode = parent.get.asInstanceOf[QueryableExpressionNode]
+  def parentQueryable: QueryableExpressionNode =
+    parent.get.asInstanceOf[QueryableExpressionNode]
 
   def resultSetMapper: ResultSetMapper
 
@@ -105,8 +107,8 @@ trait SelectElement extends ExpressionNode {
 
   def isActive: Boolean = _isActive
 
-  protected [squeryl] var _isActive = false
-  
+  protected[squeryl] var _isActive = false
+
   def expression: ExpressionNode
 
   /**
@@ -123,45 +125,51 @@ trait SelectElement extends ExpressionNode {
   }
 }
 
-class TupleSelectElement
- (val origin: QueryExpressionNode[_], val expression: ExpressionNode, indexInTuple: Int, isGroupTuple: Boolean)
-    extends SelectElement {
+class TupleSelectElement(
+  val origin: QueryExpressionNode[_],
+  val expression: ExpressionNode,
+  indexInTuple: Int,
+  isGroupTuple: Boolean
+) extends SelectElement {
 
-  def resultSetMapper: ResultSetMapper = throw new UnsupportedOperationException("refactor me")
+  def resultSetMapper: ResultSetMapper =
+    throw new UnsupportedOperationException("refactor me")
 
   //TODO: normalize ?
   def alias: String =
-    if(isGroupTuple)
+    if (isGroupTuple)
       "g" + indexInTuple
     else
       "c" + indexInTuple
-
 
   var columnToTupleMapper: Option[ColumnToTupleMapper] = None
 
   def prepareColumnMapper(index: Int): Unit = {}
 
   def typeOfExpressionToString: String =
-    if(columnToTupleMapper.isEmpty)
+    if (columnToTupleMapper.isEmpty)
       "unknown"
     else
       columnToTupleMapper.get.typeOfExpressionToString(indexInTuple)
 
   override def prepareMapper(jdbcIndex: Int): Unit =
-    if(columnToTupleMapper.isDefined)
+    if (columnToTupleMapper.isDefined)
       columnToTupleMapper.get.activate(indexInTuple, jdbcIndex)
 
   override def toString: String =
     'TupleSelectElement + ":" + indexInTuple + ":" + writeToString
 }
 
-class FieldSelectElement
-(val origin: ViewExpressionNode[_], val fieldMetaData: FieldMetaData, val resultSetMapper: ResultSetMapper)
-  extends SelectElement with UniqueIdInAliaseRequired {
+class FieldSelectElement(
+  val origin: ViewExpressionNode[_],
+  val fieldMetaData: FieldMetaData,
+  val resultSetMapper: ResultSetMapper
+) extends SelectElement
+    with UniqueIdInAliaseRequired {
 
   def alias: String =
-    if(inhibitAliasOnSelectElementReference)
-      if(realTableNamePrefix)
+    if (inhibitAliasOnSelectElementReference)
+      if (realTableNamePrefix)
         origin.view.name + "." + fieldMetaData.columnName
       else
         fieldMetaData.columnName
@@ -170,10 +178,10 @@ class FieldSelectElement
 
   override def aliasSegment: String =
     Session.currentSession.databaseAdapter.fieldAlias(origin, this)
-    //origin.alias + "_" + fieldMetaData.columnName
-  
+  //origin.alias + "_" + fieldMetaData.columnName
+
   val expression = new ExpressionNode {
-    
+
     def doWrite(sw: StatementWriter): Unit =
       sw.write(sw.quoteName(alias))
   }
@@ -184,46 +192,50 @@ class FieldSelectElement
   private var columnMapper: Option[ColumnToFieldMapper] = None
 
   def prepareMapper(jdbcIndex: Int): Unit =
-    if(columnMapper.isDefined) {
+    if (columnMapper.isDefined) {
       resultSetMapper.addColumnMapper(columnMapper.get)
       resultSetMapper.isActive = true
       _isActive = true
     }
-  
+
   def typeOfExpressionToString: String =
     fieldMetaData.displayType
-  
+
   override def toString: String =
     'FieldSelectElement + ":" +
-       Utils.failSafeString(alias, fieldMetaData.nameOfProperty)
+      Utils.failSafeString(alias, fieldMetaData.nameOfProperty)
 }
 
-class ValueSelectElement
-  (val expression: ExpressionNode, val resultSetMapper: ResultSetMapper, mapper: OutMapper[_], val origin: QueryExpressionNode[_])
-     extends SelectElement with UniqueIdInAliaseRequired {
+class ValueSelectElement(
+  val expression: ExpressionNode,
+  val resultSetMapper: ResultSetMapper,
+  mapper: OutMapper[_],
+  val origin: QueryExpressionNode[_]
+) extends SelectElement
+    with UniqueIdInAliaseRequired {
 
   def alias: String = "v" + uniqueId.get
 
   var yieldPusher: Option[YieldValuePusher] = None
 
   def prepareColumnMapper(index: Int): Unit =
-    yieldPusher = Some(new YieldValuePusher(index, this, mapper))  
+    yieldPusher = Some(new YieldValuePusher(index, this, mapper))
 
   def typeOfExpressionToString: String =
-    if(yieldPusher.isEmpty)
+    if (yieldPusher.isEmpty)
       "unknown"
     else
       yieldPusher.get.selectElement.typeOfExpressionToString
-  
+
   override def prepareMapper(jdbcIndex: Int): Unit =
-    if(yieldPusher.isDefined) {
+    if (yieldPusher.isDefined) {
       resultSetMapper.addYieldValuePusher(yieldPusher.get)
       resultSetMapper.isActive = true
       _isActive = true
     }
 
   override def toString: String =
-    'ValueSelectElement + ":" + expression.writeToString  
+    'ValueSelectElement + ":" + expression.writeToString
 }
 
 /**
@@ -231,10 +243,9 @@ class ValueSelectElement
  * with the exception of SelectElement that refer to an inner or outer query's SelectElement,
  * these are ExportedSelectElement
  */
-class SelectElementReference[A,T]
-  (val selectElement: SelectElement, val mapper: OutMapper[A])
-    extends TypedExpression[A,T] {
-    
+class SelectElementReference[A, T](val selectElement: SelectElement, val mapper: OutMapper[A])
+    extends TypedExpression[A, T] {
+
   override def toString: String =
     'SelectElementReference + ":" + Utils.failSafeString(delegateAtUseSite.alias) + ":" + selectElement.typeOfExpressionToString + inhibitedFlagForAstDump
 
@@ -242,26 +253,28 @@ class SelectElementReference[A,T]
     selectElement.inhibited
 
   private def _useSite: QueryExpressionNode[_] = {
-    
-    def findQueryExpressionNode(e: ExpressionNode): QueryExpressionNode[_] = e match {
-      case qe: QueryExpressionNode[_] => qe
-      case _ =>
-        e.parent match {
-          case Some(e_) => findQueryExpressionNode(e_)
-          case _ => 
-            org.squeryl.internals.Utils.throwError("could not determine use site of "+ this)
-        }
-    }
-    
+
+    def findQueryExpressionNode(e: ExpressionNode): QueryExpressionNode[_] =
+      e match {
+        case qe: QueryExpressionNode[_] => qe
+        case _ =>
+          e.parent match {
+            case Some(e_) => findQueryExpressionNode(e_)
+            case _ =>
+              org.squeryl.internals.Utils
+                .throwError("could not determine use site of " + this)
+          }
+      }
+
     findQueryExpressionNode(this)
   }
 
   lazy val delegateAtUseSite: SelectElement =
-    if(selectElement.parent.isEmpty)
+    if (selectElement.parent.isEmpty)
       selectElement
     else {
       val us = this._useSite
-      if(selectElement.parentQueryable == us)
+      if (selectElement.parentQueryable == us)
         selectElement
       else {
         val ese = new ExportedSelectElement(this.selectElement)
@@ -277,9 +290,7 @@ class SelectElementReference[A,T]
 /**
  * SelectElement that refer to a SelectElement of an inner or outer query
  */
-class ExportedSelectElement
-  (val selectElement: SelectElement)
-    extends SelectElement {
+class ExportedSelectElement(val selectElement: SelectElement) extends SelectElement {
 
   def resultSetMapper: ResultSetMapper = selectElement.resultSetMapper
 
@@ -300,25 +311,27 @@ class ExportedSelectElement
   val expression = new ExpressionNode {
 
     def doWrite(sw: StatementWriter): Unit =
-    sw.write(sw.quoteName(alias))
+      sw.write(sw.quoteName(alias))
   }
 
   override def toString: String =
     'ExportedSelectElement + ":" + alias + ",(selectElement=" + selectElement + ")"
 
-  def alias:String =
+  def alias: String =
     if (isDirectOuterReference)
       selectElement.alias
     else
-      target.parent.get.asInstanceOf[QueryableExpressionNode].alias + "." + target.aliasSegment
+      target.parent.get
+        .asInstanceOf[QueryableExpressionNode]
+        .alias + "." + target.aliasSegment
 
   override def aliasSegment: String =
     //target.parent.get.asInstanceOf[QueryableExpressionNode].alias + "_" + target.aliasSegment
     if (isDirectOuterReference)
       selectElement.aliasSegment
     else
-      Session.currentSession.databaseAdapter.aliasExport(
-        target.parent.get.asInstanceOf[QueryableExpressionNode], target)
+      Session.currentSession.databaseAdapter
+        .aliasExport(target.parent.get.asInstanceOf[QueryableExpressionNode], target)
 
   /**
    * A root level query that has nested queries (or refers to queries in an outer scope) will
@@ -336,47 +349,56 @@ class ExportedSelectElement
    *   exportSelectElement.target.target.,...,.target == exportSelectElement.actualSelectElement
    */
   lazy val target: SelectElement = innerTarget.getOrElse(
-    outerTarget.getOrElse(org.squeryl.internals.Utils.throwError("could not find the target of : " + selectElement))
+    outerTarget.getOrElse(
+      org.squeryl.internals.Utils
+        .throwError("could not find the target of : " + selectElement)
+    )
   )
 
-  private def outerScopes: List[QueryExpressionNode[_]] = outerScopes0(this, Nil)
+  private def outerScopes: List[QueryExpressionNode[_]] =
+    outerScopes0(this, Nil)
 
   @tailrec
-  private def outerScopes0(current: ExpressionNode, scopes: List[QueryExpressionNode[_]]): List[QueryExpressionNode[_]] = {
+  private def outerScopes0(
+    current: ExpressionNode,
+    scopes: List[QueryExpressionNode[_]]
+  ): List[QueryExpressionNode[_]] = {
     current.parent match {
       case Some(s: QueryExpressionNode[_]) => outerScopes0(s, scopes :+ s)
-      case Some(n) => outerScopes0(n, scopes)
-      case None => scopes
+      case Some(n)                         => outerScopes0(n, scopes)
+      case None                            => scopes
     }
   }
 
-  private def isDirectOuterReference: Boolean = outerScopes.contains(selectElement.parentQueryable)
+  private def isDirectOuterReference: Boolean =
+    outerScopes.contains(selectElement.parentQueryable)
 
   private def outerTarget: Option[SelectElement] = {
     val q =
-      for (outer <- outerScopes;
+      for (outer    <- outerScopes;
            subQuery <- outer.subQueries;
-           se <- subQuery.asInstanceOf[QueryExpressionElements].selectList
-             if se == selectElement || se.actualSelectElement == selectElement)
-      yield se
+           se       <- subQuery.asInstanceOf[QueryExpressionElements].selectList
+           if se == selectElement || se.actualSelectElement == selectElement)
+        yield se
 
     q.headOption
   }
 
   private def innerTarget: Option[SelectElement] =
-    if(parent.isEmpty)
+    if (parent.isEmpty)
       None
     else {
       val parentOfThis = parent.get.asInstanceOf[QueryExpressionElements]
 
-      if(selectElement.origin.parent.get == parentOfThis) {
+      if (selectElement.origin.parent.get == parentOfThis) {
         Some(selectElement)
-      }
-      else {
+      } else {
         val q =
-          for{q <- parentOfThis.subQueries
-              se <- q.asInstanceOf[QueryExpressionElements].selectList if se == selectElement || se.actualSelectElement == selectElement}
-          yield se
+          for {
+            q  <- parentOfThis.subQueries
+            se <- q.asInstanceOf[QueryExpressionElements].selectList
+            if se == selectElement || se.actualSelectElement == selectElement
+          } yield se
 
         q.headOption
       }

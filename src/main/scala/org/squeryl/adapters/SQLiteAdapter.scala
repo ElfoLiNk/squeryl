@@ -18,34 +18,34 @@ package org.squeryl.adapters
 import java.sql.SQLException
 
 import org.squeryl.dsl.CompositeKey
-import org.squeryl.dsl.ast.{ExpressionNode, QueryExpressionElements}
+import org.squeryl.dsl.ast.{ ExpressionNode, QueryExpressionElements }
 import org.squeryl._
 import org.squeryl.internals._
 
 class SQLiteAdapter extends DatabaseAdapter {
 
-  override def uuidTypeDeclaration = "uuid"
+  override def uuidTypeDeclaration      = "uuid"
   override def isFullOuterJoinSupported = false
 
   override def writeColumnDeclaration(fmd: FieldMetaData, isPrimaryKey: Boolean, schema: Schema): String = {
 
     var res = "  " + fmd.columnName + " " + databaseTypeFor(fmd)
 
-    for(d <- fmd.defaultValue) {
+    for (d <- fmd.defaultValue) {
       val v = convertToJdbcValue(d.value.asInstanceOf[AnyRef])
-      if(v.isInstanceOf[String])
+      if (v.isInstanceOf[String])
         res += " default '" + v + "'"
       else
-        res += " default " + v 
+        res += " default " + v
     }
-    
-    if(!fmd.isOption)
+
+    if (!fmd.isOption)
       res += " not null"
 
-    if(isPrimaryKey)
+    if (isPrimaryKey)
       res += " primary key"
 
-    if(supportsAutoIncrementInColumnDeclaration && fmd.isAutoIncremented)
+    if (supportsAutoIncrementInColumnDeclaration && fmd.isAutoIncremented)
       res += " autoincrement"
 
     res
@@ -81,14 +81,13 @@ class SQLiteAdapter extends DatabaseAdapter {
           val id = ked.asInstanceOf[KeyedEntityDef[AnyRef, AnyRef]].getId(z)
           id match {
             case key: CompositeKey => key._fields
-            case _ => Seq.empty[FieldMetaData]
+            case _                 => Seq.empty[FieldMetaData]
           }
 
         }
       )
     }) getOrElse Seq.empty[FieldMetaData]
   }
-
 
   override def intTypeDeclaration: String = "INTEGER"
 
@@ -99,15 +98,20 @@ class SQLiteAdapter extends DatabaseAdapter {
   override def writeCompositePrimaryKeyConstraint(t: Table[_], cols: Iterable[FieldMetaData]): String =
     s"SELECT * FROM sqlite_master WHERE 1 = 2"
 
-  override def writeDropTable(tableName: String): String = s"DROP TABLE IF EXISTS $tableName"
+  override def writeDropTable(tableName: String): String =
+    s"DROP TABLE IF EXISTS $tableName"
 
   override def isTableDoesNotExistException(e: SQLException): Boolean =
     e.getErrorCode == 42102
 
   override def supportsCommonTableExpressions = false
 
-  override def writeEndOfQueryHint(isForUpdate: () => Boolean, qen: QueryExpressionElements, sw: StatementWriter): Unit =
-    if(isForUpdate()) {
+  override def writeEndOfQueryHint(
+    isForUpdate: () => Boolean,
+    qen: QueryExpressionElements,
+    sw: StatementWriter
+  ): Unit =
+    if (isForUpdate()) {
       sw.pushPendingNextLine
     }
 

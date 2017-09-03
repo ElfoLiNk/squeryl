@@ -15,35 +15,23 @@ package org.squeryl.dbagnostic
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************** */
-
-import org.squeryl.KeyedEntity
-import org.squeryl.annotations.{Row, Column}
-import org.squeryl.Schema
-import org.scalatest.FunSuite
-import org.scalatest.Matchers
+import org.squeryl.{ KeyedEntity, Schema, Table }
+import org.squeryl.annotations.{ Column, Row }
+import org.scalatest.{ Assertion, FunSuite, Matchers }
 import org.squeryl.test.PrimitiveTypeModeForTests
-
-
 @Row("T_TOASTER")
 class Toaster(
-
-  @Column(optionType=classOf[Int])
+  @Column(optionType = classOf[Int])
   var yearOfManufacture: Option[Int],
+  @Column(optionType = classOf[String], length = 25)
+  var countryOfOrigin: Option[String],
+  @Column(name = "dateOfPurchase", optionType = classOf[java.util.Date])
+  var dateOfPurchase: Option[java.util.Date],
+  @Column(name = "BRAND_NAME", length = 32)
+  var brandName: String
+) {
 
-// TODO: uncomment when scalac bug #3003 is resolved
-//  @Column(optionType=classOf[String], length=25)
-//  var countryOfOrigin: Option[String],
-
-//  @Column(name="dateOfPurchase", optionType=classOf[java.util.Date])
-//  var dateOfPurchase: Option[java.util.Date]
-
-  @Column(length=25)
-  var countryOfOrigin: String,
-
-  @Column(name="BRAND_NAME", length=32)
-  var brandName: String) {
-
-  @Column(name="WEIGHT", optionType=classOf[Float])
+  @Column(name = "WEIGHT", optionType = classOf[Float])
   var weightInGrams: Option[String] = None
 
   @Column("Zozo12")
@@ -56,7 +44,6 @@ class NailCutter extends KeyedEntity[Long] {
   val id: Long = 0
 }
 
-
 class KeyedObject extends KeyedEntity[Long] {
   val id: Long = 0
 }
@@ -67,55 +54,59 @@ class DescendantOfKeyedObject extends KeyedObject {
 
 class AnnotationTests extends FunSuite with Matchers {
 
-
   class C(
-    @Column(optionType=classOf[Long]) var j: Option[Long],
-    @Column(optionType=classOf[java.lang.String]) var k: Option[String]) (
-
-    @Column(optionType=classOf[Int])
-    var i:Option[Int]
+    @Column(optionType = classOf[Long]) var j: Option[Long],
+    @Column(optionType = classOf[java.lang.String]) var k: Option[String]
+  )(
+    @Column(optionType = classOf[Int])
+    var i: Option[Int]
   )
 
-  def allTests = {
+  def allTests(): Unit = {
     //rudimentaryTests
   }
 
   class ToastersInc extends Schema()(PrimitiveTypeModeForTests) {
 
     import PrimitiveTypeModeForTests._
-    
-    val descendantOfKeyedObjects = table[DescendantOfKeyedObject]
 
-    val nailCutters = table[NailCutter]
+    val descendantOfKeyedObjects: Table[DescendantOfKeyedObject] =
+      table[DescendantOfKeyedObject]
 
-    val toasters = table[Toaster]
+    val nailCutters: Table[NailCutter] = table[NailCutter]
+
+    val toasters: Table[Toaster] = table[Toaster]
   }
 
   //test("MetaData"){
 
-  def reflectionBrokenIn_2_9_0_RCx = {
+  def reflectionBrokenIn_2_9_0_RCx: Assertion = {
 
     val ti = new ToastersInc
     import ti._
 
+    val _isPersistedFmd = descendantOfKeyedObjects.posoMetaData
+      .findFieldMetaDataForProperty("_isPersisted")
 
-    val _isPersistedFmd = descendantOfKeyedObjects.posoMetaData.findFieldMetaDataForProperty("_isPersisted")
-
-    if(_isPersistedFmd != None)
+    if (_isPersistedFmd.isDefined)
       fail('testMetaData + " failed, @transient annotation of field _isPersisted was not effective.")
 
-    if(descendantOfKeyedObjects.findFieldMetaDataForProperty("id") == None)
+    if (descendantOfKeyedObjects.findFieldMetaDataForProperty("id").isEmpty)
       fail("PosoMetaData has failed to build immutable field 'id'.")
 
-    if(nailCutters.findFieldMetaDataForProperty("id") == None)
+    if (nailCutters.findFieldMetaDataForProperty("id").isEmpty)
       fail("PosoMetaData has failed to build immutable field 'id'.")
 
     val brandNameMD = toasters.findFieldMetaDataForProperty("brandName").get
     assert(brandNameMD.columnName == "BRAND_NAME", "expected 'BRAND_NAME' got " + brandNameMD.columnName)
     assert(brandNameMD.length == 32, "expected 32 got " + brandNameMD.length)
 
-    val yearOfManufacture = toasters.findFieldMetaDataForProperty("yearOfManufacture").get
-    assert(yearOfManufacture.columnName == "yearOfManufacture", "expected 'yearOfManufacture' got " + yearOfManufacture.columnName)
+    val yearOfManufacture =
+      toasters.findFieldMetaDataForProperty("yearOfManufacture").get
+    assert(
+      yearOfManufacture.columnName == "yearOfManufacture",
+      "expected 'yearOfManufacture' got " + yearOfManufacture.columnName
+    )
     assert(yearOfManufacture.length == 4, "expected 4 got " + yearOfManufacture.length)
 
     val zozo = toasters.findFieldMetaDataForProperty("zozo").get
@@ -132,14 +123,19 @@ class AnnotationTests extends FunSuite with Matchers {
    * There has been a Scala bug with obtaining a Class[_] member in annotations,
    * if this test fails, it means that Scala has regressed TODO: file a bug
    */
-  test("scalaReflectionTests"){
+  test("scalaReflectionTests") {
     val colAnotations =
-      classOf[C].getDeclaredFields.toList.sortBy(f => f.getName).map(f => f.getAnnotations.toList).flatten
+      classOf[C].getDeclaredFields.toList
+        .sortBy(f => f.getName)
+        .flatMap(f => f.getAnnotations.toList)
 
     val c = colAnotations.size
-    assert(c == 3, "class " + classOf[C].getName + " has 3 field annotations of type Column that have failed to be reflected, " + c + " were reflected")
+    assert(
+      c == 3,
+      "class " + classOf[C].getName + " has 3 field annotations of type Column that have failed to be reflected, " + c + " were reflected"
+    )
 
-    val t1 = colAnotations.apply(0).asInstanceOf[Column].optionType
+    val t1 = colAnotations.head.asInstanceOf[Column].optionType
     val t2 = colAnotations.apply(1).asInstanceOf[Column].optionType
     val t3 = colAnotations.apply(2).asInstanceOf[Column].optionType
 

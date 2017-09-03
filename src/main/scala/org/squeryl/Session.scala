@@ -1,12 +1,12 @@
 /*******************************************************************************
  * Copyright 2010 Maxime Lévesque
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,11 +18,14 @@ package org.squeryl
 import logging.StatisticsListener
 import org.squeryl.internals._
 import collection.mutable.ArrayBuffer
-import java.sql.{SQLException, ResultSet, Statement, Connection}
+import java.sql.{ Connection, ResultSet, SQLException, Statement }
 import scala.util.control.ControlThrowable
 
-
-class LazySession(val connectionFunc: () => Connection, val databaseAdapter: DatabaseAdapter, val statisticsListener: Option[StatisticsListener] = None) extends AbstractSession {
+class LazySession(
+  val connectionFunc: () => Connection,
+  val databaseAdapter: DatabaseAdapter,
+  val statisticsListener: Option[StatisticsListener] = None
+) extends AbstractSession {
 
   private var _connection: Option[Connection] = None
 
@@ -40,7 +43,7 @@ class LazySession(val connectionFunc: () => Connection, val databaseAdapter: Dat
       val c = connectionFunc()
       try {
         originalAutoCommit = c.getAutoCommit
-        if(originalAutoCommit)
+        if (originalAutoCommit)
           c.setAutoCommit(false)
         originalTransactionIsolation = c.getTransactionIsolation
         _connection = Option(c)
@@ -95,7 +98,11 @@ class LazySession(val connectionFunc: () => Connection, val databaseAdapter: Dat
 
 }
 
-class Session(val connection: Connection, val databaseAdapter: DatabaseAdapter, val statisticsListener: Option[StatisticsListener] = None) extends AbstractSession {
+class Session(
+  val connection: Connection,
+  val databaseAdapter: DatabaseAdapter,
+  val statisticsListener: Option[StatisticsListener] = None
+) extends AbstractSession {
 
   val hasConnection = true
 
@@ -166,22 +173,20 @@ trait AbstractSession {
 
   protected[squeryl] def withinTransaction[A](f: () => A): A
 
-  protected[squeryl] def using[A](a: ()=>A): A = {
+  protected[squeryl] def using[A](a: () => A): A = {
     val s = Session.currentSessionOption
     try {
-      if(s.isDefined) s.get.unbindFromCurrentThread()
+      if (s.isDefined) s.get.unbindFromCurrentThread()
       try {
         this.bindToCurrentThread()
         val r = a()
         r
-      }
-      finally {
+      } finally {
         this.unbindFromCurrentThread()
         this.cleanup()
       }
-    }
-    finally {
-      if(s.isDefined) s.get.bindToCurrentThread()
+    } finally {
+      if (s.isDefined) s.get.bindToCurrentThread()
     }
   }
 
@@ -201,7 +206,7 @@ trait AbstractSession {
 
   def isLoggingEnabled: Boolean = _logger != null
 
-  def log(s:String): Unit = if(isLoggingEnabled) _logger(s)
+  def log(s: String): Unit = if (isLoggingEnabled) _logger(s)
 
   var logUnclosedStatements = false
 
@@ -209,15 +214,20 @@ trait AbstractSession {
 
   private val _resultSets = new ArrayBuffer[ResultSet]
 
-  private [squeryl] def _addStatement(s: Statement): Unit = _statements.append(s)
+  private[squeryl] def _addStatement(s: Statement): Unit = _statements.append(s)
 
-  private [squeryl] def _addResultSet(rs: ResultSet): Unit = _resultSets.append(rs)
+  private[squeryl] def _addResultSet(rs: ResultSet): Unit =
+    _resultSets.append(rs)
 
   def cleanup(): Unit = {
     _statements.foreach(s => {
       if (logUnclosedStatements && isLoggingEnabled && !s.isClosed) {
-        val stackTrace = Thread.currentThread.getStackTrace.map("at " + _).mkString("\n")
-        log("Statement is not closed: " + s + ": " + System.identityHashCode(s) + "\n" + stackTrace)
+        val stackTrace =
+          Thread.currentThread.getStackTrace.map("at " + _).mkString("\n")
+        log(
+          "Statement is not closed: " + s + ": " + System
+            .identityHashCode(s) + "\n" + stackTrace
+        )
       }
       Utils.close(s)
     })
@@ -230,7 +240,7 @@ trait AbstractSession {
 
   def close(): Unit = {
     cleanup()
-    if(hasConnection)
+    if (hasConnection)
       connection.close()
   }
 
@@ -244,25 +254,29 @@ object SessionFactory {
 
   /**
    * Initializing concreteFactory with a Session creating closure enables the use of
-   * the 'transaction' and 'inTransaction' block functions 
+   * the 'transaction' and 'inTransaction' block functions
    */
-  var concreteFactory: Option[()=>AbstractSession] = None
+  var concreteFactory: Option[() => AbstractSession] = None
 
   /**
    * Initializing externalTransactionManagementAdapter with a Session creating closure allows to
    * execute Squeryl statements *without* the need of using 'transaction' and 'inTransaction'.
    * The use case for this is to allow Squeryl connection/transactions to be managed by an
    * external framework. In this case Session.cleanupResources *needs* to be called when connections
-   * are closed, otherwise statement of resultset leaks can occur. 
+   * are closed, otherwise statement of resultset leaks can occur.
    */
-  var externalTransactionManagementAdapter: Option[()=>Option[AbstractSession]] = None
+  var externalTransactionManagementAdapter: Option[() => Option[AbstractSession]] = None
 
   def newSession: AbstractSession =
-      concreteFactory.getOrElse(
-        throw new IllegalStateException("org.squeryl.SessionFactory not initialized, SessionFactory.concreteFactory must be assigned a \n"+
-              "function for creating new org.squeryl.Session, before transaction can be used.\n" +
-              "Alternatively SessionFactory.externalTransactionManagementAdapter can initialized, please refer to the documentation.")
-      ).apply        
+    concreteFactory
+      .getOrElse(
+        throw new IllegalStateException(
+          "org.squeryl.SessionFactory not initialized, SessionFactory.concreteFactory must be assigned a \n" +
+            "function for creating new org.squeryl.Session, before transaction can be used.\n" +
+            "Alternatively SessionFactory.externalTransactionManagementAdapter can initialized, please refer to the documentation."
+        )
+      )
+      .apply
 }
 
 object Session {
@@ -270,15 +284,15 @@ object Session {
   /**
    * Note about ThreadLocals: all thread locals should be .removed() before the
    * transaction ends.
-   * 
+   *
    * Leaving a ThreadLocal inplace after the control returns to the user thread
    * will pollute the users threads and will cause problems for e.g. Tomcat and
    * other servlet engines.
    */
   private val _currentSessionThreadLocal = new ThreadLocal[AbstractSession]
-  
+
   def create(c: Connection, a: DatabaseAdapter) =
-    new Session(c,a)
+    new Session(c, a)
 
   def create(connectionFunc: () => Connection, a: DatabaseAdapter) =
     new LazySession(connectionFunc, a)
@@ -292,10 +306,15 @@ object Session {
   def currentSession: AbstractSession =
     SessionFactory.externalTransactionManagementAdapter match {
       case Some(a) =>
-        a.apply getOrElse org.squeryl.internals.Utils.throwError("SessionFactory.externalTransactionManagementAdapter was unable to supply a Session for the current scope")
+        a.apply getOrElse org.squeryl.internals.Utils.throwError(
+          "SessionFactory.externalTransactionManagementAdapter was unable to supply a Session for the current scope"
+        )
       case None =>
         currentSessionOption.getOrElse(
-          throw new IllegalStateException("No session is bound to current thread, a session must be created via Session.create \nand bound to the thread via 'work' or 'bindToCurrentThread'\n Usually this error occurs when a statement is executed outside of a transaction/inTrasaction block"))
+          throw new IllegalStateException(
+            "No session is bound to current thread, a session must be created via Session.create \nand bound to the thread via 'work' or 'bindToCurrentThread'\n Usually this error occurs when a statement is executed outside of a transaction/inTrasaction block"
+          )
+        )
     }
 
   def hasCurrentSession: Boolean =
@@ -306,7 +325,7 @@ object Session {
 
   private[squeryl] def currentSession_=(s: Option[AbstractSession]): Unit =
     if (s.isEmpty) {
-      _currentSessionThreadLocal.remove()        
+      _currentSessionThreadLocal.remove()
     } else {
       _currentSessionThreadLocal.set(s.get)
     }

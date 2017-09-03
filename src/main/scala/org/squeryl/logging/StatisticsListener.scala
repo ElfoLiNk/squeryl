@@ -15,9 +15,13 @@
  ******************************************************************************/
 package org.squeryl.logging
 
-
-
-class StatementInvocationEvent(_definitionOrCallSite: StackTraceElement, val start: Long, val end: Long, val rowCount: Int, val jdbcStatement: String) {
+class StatementInvocationEvent(
+  _definitionOrCallSite: StackTraceElement,
+  val start: Long,
+  val end: Long,
+  val rowCount: Int,
+  val jdbcStatement: String
+) {
 
   val uuid: String = {
     val tmp = java.util.UUID.randomUUID
@@ -33,7 +37,12 @@ trait StatisticsListener {
 
   def queryExecuted(se: StatementInvocationEvent): Unit
 
-  def resultSetIterationEnded(statementInvocationId: String, iterationEndTime: Long, rowCount: Int, iterationCompleted: Boolean): Unit
+  def resultSetIterationEnded(
+    statementInvocationId: String,
+    iterationEndTime: Long,
+    rowCount: Int,
+    iterationCompleted: Boolean
+  ): Unit
 
   def updateExecuted(se: StatementInvocationEvent): Unit
 
@@ -42,10 +51,7 @@ trait StatisticsListener {
   def deleteExecuted(se: StatementInvocationEvent): Unit
 }
 
-
 object StackMarker {
 
-  def lastSquerylStackFrame[A](a: =>A): A = a
+  def lastSquerylStackFrame[A](a: => A): A = a
 }
-
-

@@ -16,27 +16,28 @@
 package org.squeryl.adapters
 
 import java.sql.SQLException
-import org.squeryl.internals.{StatementWriter, FieldMetaData, DatabaseAdapter}
+import org.squeryl.internals.{ DatabaseAdapter, FieldMetaData, StatementWriter }
 import org.squeryl.dsl.ast._
-import org.squeryl.{Schema}
+import org.squeryl.{ Schema }
 
 class MSSQLServer extends DatabaseAdapter {
 
   override def isFullOuterJoinSupported = false
 
-  override def intTypeDeclaration = "int"
+  override def intTypeDeclaration    = "int"
   override def stringTypeDeclaration = "varchar"
-  override def stringTypeDeclaration(length:Int): String = "varchar("+length+")"
-  override def booleanTypeDeclaration = "bit"
-  override def doubleTypeDeclaration = "float"
-  override def longTypeDeclaration = "bigint"
+  override def stringTypeDeclaration(length: Int): String =
+    "varchar(" + length + ")"
+  override def booleanTypeDeclaration    = "bit"
+  override def doubleTypeDeclaration     = "float"
+  override def longTypeDeclaration       = "bigint"
   override def bigDecimalTypeDeclaration = "decimal"
-  override def bigDecimalTypeDeclaration(precision:Int, scale:Int): String = "numeric(" + precision + "," + scale + ")"
+  override def bigDecimalTypeDeclaration(precision: Int, scale: Int): String =
+    "numeric(" + precision + "," + scale + ")"
   override def binaryTypeDeclaration = "varbinary(8000)"
 
-
-  override def dateTypeDeclaration = "date"
-  override def floatTypeDeclaration = "real"
+  override def dateTypeDeclaration      = "date"
+  override def floatTypeDeclaration     = "real"
   override def timestampTypeDeclaration = "datetime"
 
   override def supportsUnionQueryOptions = false
@@ -44,13 +45,13 @@ class MSSQLServer extends DatabaseAdapter {
   override def writeColumnDeclaration(fmd: FieldMetaData, isPrimaryKey: Boolean, schema: Schema): String = {
 
     var res = "  " + quoteIdentifier(fmd.columnName) + " " + databaseTypeFor(fmd)
-    if(!fmd.isOption)
+    if (!fmd.isOption)
       res += " not null"
 
-    if(isPrimaryKey)
+    if (isPrimaryKey)
       res += " primary key"
 
-    if(supportsAutoIncrementInColumnDeclaration && fmd.isAutoIncremented)
+    if (supportsAutoIncrementInColumnDeclaration && fmd.isAutoIncremented)
       res += " IDENTITY(1,1)"
 
     res
@@ -59,14 +60,18 @@ class MSSQLServer extends DatabaseAdapter {
   override def isTableDoesNotExistException(e: SQLException): Boolean =
     e.getErrorCode == 3701
 
-  override def writeEndOfQueryHint(isForUpdate: () => Boolean, qen: QueryExpressionElements, sw: StatementWriter): Unit = {}
+  override def writeEndOfQueryHint(
+    isForUpdate: () => Boolean,
+    qen: QueryExpressionElements,
+    sw: StatementWriter
+  ): Unit = {}
 
   override def writeEndOfFromHint(qen: QueryExpressionElements, sw: StatementWriter): Unit =
-    if(qen.isForUpdate) {
+    if (qen.isForUpdate) {
       sw.write("with(updlock, rowlock)")
       sw.pushPendingNextLine
     }
-  
+
   override def writeConcatFunctionCall(fn: FunctionNode, sw: StatementWriter): Unit =
     sw.writeNodesWithSeparator(fn.args, " + ", false)
 
@@ -132,18 +137,22 @@ class MSSQLServer extends DatabaseAdapter {
 //    }
 
   override def writeQuery(qen: QueryExpressionElements, sw: StatementWriter): Unit =
-    if(qen.page.isEmpty)
+    if (qen.page.isEmpty)
       super.writeQuery(qen, sw)
     else {
-      val page = qen.page.get
+      val page        = qen.page.get
       val beginOffset = page._1
-      val pageSize = page._2
+      val pageSize    = page._2
 
       sw.writeIndented {
         super.writeQuery(qen, sw, inverseOrderBy = false, Some(" TOP " + (beginOffset + pageSize) + " "))
       }
     }
-  
-  override def writePaginatedQueryDeclaration(page: () => Option[(Int, Int)], qen: QueryExpressionElements, sw: StatementWriter): Unit = {}
+
+  override def writePaginatedQueryDeclaration(
+    page: () => Option[(Int, Int)],
+    qen: QueryExpressionElements,
+    sw: StatementWriter
+  ): Unit                                         = {}
   override def quoteIdentifier(s: String): String = "[" + s + "]"
 }

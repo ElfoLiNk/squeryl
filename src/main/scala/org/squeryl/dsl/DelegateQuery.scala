@@ -16,7 +16,7 @@ class DelegateQuery[M](val q: Query[M]) extends Query[M] {
 
   def dumpAst: String = q.dumpAst
 
-  def page(offset:Int, length:Int): Query[M] = q.page(offset, length)
+  def page(offset: Int, length: Int): Query[M] = q.page(offset, length)
 
   def statement: String = q.statement
 
@@ -26,9 +26,9 @@ class DelegateQuery[M](val q: Query[M]) extends Query[M] {
     q.invokeYield(rsm, rs)
 
   override private[squeryl] def copy(
-      asRoot: Boolean,
-      newUnions: List[(String, Query[M])]
-    ): Query[M] =
+    asRoot: Boolean,
+    newUnions: List[(String, Query[M])]
+  ): Query[M] =
     q.copy(asRoot, newUnions)
 
   def name: String = q.name

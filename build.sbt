@@ -8,18 +8,19 @@ version := "0.9.9"
 
 //only release *if* -Drelease=true is passed to JVM
 version := {
-  val v = version.value
+  val v       = version.value
   val release = Option(System.getProperty("release")).contains("true")
-  if(release)
+  if (release)
     v
   else {
     val suffix = Option(System.getProperty("suffix"))
     val i = (v.indexOf('-'), v.length) match {
       case (x, l) if x < 0 => l
-      case (x, l) if v substring (x+1) matches """\d+""" => l //patch level, not RCx
+      case (x, l) if v substring (x + 1) matches """\d+""" =>
+        l //patch level, not RCx
       case (x, _) => x
     }
-    v.substring(0,i) + "-" + (suffix getOrElse "SNAPSHOT")
+    v.substring(0, i) + "-" + (suffix getOrElse "SNAPSHOT")
   }
 }
 
@@ -41,14 +42,16 @@ scalacOptions in (Compile, doc) ++= {
 
 scalacOptions ++= {
   Seq("-unchecked", "-deprecation", "-Xfuture") ++ (
-  if(scalaVersion.value.startsWith("2.11"))
-    Seq("-feature",
-    "-language:implicitConversions",
-    "-language:postfixOps",
-    "-language:reflectiveCalls",
-    "-language:existentials")
-  else
-    Nil
+    if (scalaVersion.value.startsWith("2.11"))
+      Seq(
+        "-feature",
+        "-language:implicitConversions",
+        "-language:postfixOps",
+        "-language:reflectiveCalls",
+        "-language:existentials"
+      )
+    else
+      Nil
   )
 }
 
@@ -57,13 +60,14 @@ val unusedWarnings = Seq(
   "-Ywarn-unused-import"
 )
 
-scalacOptions ++= PartialFunction.condOpt(CrossVersion.partialVersion(scalaVersion.value)){
-  case Some((2, v)) if v >= 11 => unusedWarnings
-}.toList.flatten
+scalacOptions ++= PartialFunction
+  .condOpt(CrossVersion.partialVersion(scalaVersion.value)) {
+    case Some((2, v)) if v >= 11 => unusedWarnings
+  }
+  .toList
+  .flatten
 
-Seq(Compile, Test).flatMap(c =>
-  scalacOptions in (c, console) --= unusedWarnings
-)
+Seq(Compile, Test).flatMap(c => scalacOptions in (c, console) --= unusedWarnings)
 
 licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
 
@@ -89,11 +93,7 @@ pomExtra := (<scm>
 credentials ~= { c =>
   (Option(System.getenv().get("SONATYPE_USERNAME")), Option(System.getenv().get("SONATYPE_PASSWORD"))) match {
     case (Some(username), Some(password)) =>
-      c :+ Credentials(
-        "Sonatype Nexus Repository Manager",
-        "oss.sonatype.org",
-        username,
-        password)
+      c :+ Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)
     case _ => c
   }
 }
@@ -108,18 +108,20 @@ publishTo := {
 
 publishArtifact in Test := false
 
-pomIncludeRepository := { _ => false }
+pomIncludeRepository := { _ =>
+  false
+}
 
 libraryDependencies ++= Seq(
-  "cglib" % "cglib-nodep" % "3.2.5",
-  "com.h2database" % "h2" % "1.4.196" % "provided",
-  "mysql" % "mysql-connector-java" % "5.1.44" % "provided",
-  "org.postgresql" % "postgresql" % "9.4.1212" % "provided",
-  "net.sourceforge.jtds" % "jtds" % "1.3.1" % "provided",
-  "org.apache.derby" % "derby" % "10.11.1.1" % "provided",
-  "org.xerial" % "sqlite-jdbc" % "3.20.0" % "test",
-  "org.json4s" %% "json4s-scalap" % "3.5.3",
-  "org.scalatest" %% "scalatest" % "3.0.3" % "test"
+  "cglib"                % "cglib-nodep"          % "3.2.5",
+  "com.h2database"       % "h2"                   % "1.4.196" % "provided",
+  "mysql"                % "mysql-connector-java" % "5.1.44" % "provided",
+  "org.postgresql"       % "postgresql"           % "9.4.1212" % "provided",
+  "net.sourceforge.jtds" % "jtds"                 % "1.3.1" % "provided",
+  "org.apache.derby"     % "derby"                % "10.11.1.1" % "provided",
+  "org.xerial"           % "sqlite-jdbc"          % "3.20.0" % "test",
+  "org.json4s"           %% "json4s-scalap"       % "3.5.3",
+  "org.scalatest"        %% "scalatest"           % "3.0.3" % "test"
 )
 
 libraryDependencies ++= {
