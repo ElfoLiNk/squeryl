@@ -1,5 +1,6 @@
 [![maven central](https://maven-badges.herokuapp.com/maven-central/org.squeryl/squeryl_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.squeryl/squeryl_2.12)
 [![javadoc](http://javadoc-badge.appspot.com/org.squeryl/squeryl_2.12.svg?label=scaladoc)](http://javadoc-badge.appspot.com/org.squeryl/squeryl_2.12/org/squeryl/index.html?javadocio=true)
+[![Coverage Status](https://coveralls.io/repos/github/ElfoLiNk/squeryl/badge.svg?branch=master)](https://coveralls.io/github/ElfoLiNk/squeryl?branch=master)
 
 ## How to build
 1. Download or clone repository:  

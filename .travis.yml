@@ -31,7 +31,7 @@ script:
 - sbt ++${TRAVIS_SCALA_VERSION} clean coverage test:compile
 - rm -r src/test/scala/org/squeryl/oracle/
 - rm -r src/test/scala/org/squeryl/mssql/
-- sbt ++${TRAVIS_SCALA_VERSION} coverage test
+- sbt ++${TRAVIS_SCALA_VERSION} coverage test coverageReport
 after_success:
 - sbt coveralls
 env:
