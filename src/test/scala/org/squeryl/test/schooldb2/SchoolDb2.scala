@@ -2,10 +2,11 @@ package org.squeryl.test.schooldb2
 
 import org.squeryl.test.PrimitiveTypeModeForTests._
 import org.squeryl._
-import dsl.{ CompositeKey2, OneToMany }
-import java.sql.{ Savepoint }
+import dsl.{CompositeKey2, ManyToMany, ManyToOne, OneToMany}
+import java.sql.Savepoint
 
 import org.squeryl.framework._
+import org.squeryl.test.PrimitiveTypeModeForTests
 
 trait SchoolDb2Object {
   val id: Long = 0
@@ -15,7 +16,7 @@ object SchoolDb2 extends SchoolDb2
 
 class Professor(val lastName: String, var bossId: Option[Long] = None) extends SchoolDb2Object {
 
-  lazy val courses = SchoolDb2.courseAssignments.left(this)
+  lazy val courses: Query[Course] with ManyToMany[Course, CourseAssignment] = SchoolDb2.courseAssignments.left(this)
 }
 
 class Course(val subjectId: Long) extends SchoolDb2Object {
@@ -23,38 +24,38 @@ class Course(val subjectId: Long) extends SchoolDb2Object {
   def this() = this(0)
 
   // Lets support the case where a course can have more than one professor
-  lazy val professors = SchoolDb2.courseAssignments.right(this)
+  lazy val professors: Query[Professor] with ManyToMany[Professor, CourseAssignment] = SchoolDb2.courseAssignments.right(this)
 
-  lazy val students = SchoolDb2.courseSubscriptions.left(this)
+  lazy val students: Query[Student] with ManyToMany[Student, CourseSubscription] = SchoolDb2.courseSubscriptions.left(this)
 
-  lazy val subject = SchoolDb2.subjectToCourses.right(this)
+  lazy val subject: ManyToOne[Subject] = SchoolDb2.subjectToCourses.right(this)
 }
 
 class Student(val firstName: String, val lastName: String) extends SchoolDb2Object {
 
-  lazy val courses = SchoolDb2.courseSubscriptions.right(this)
+  lazy val courses: Query[Course] with ManyToMany[Course, CourseSubscription] = SchoolDb2.courseSubscriptions.right(this)
 
-  def fullName = compositeKey(firstName, lastName)
+  def fullName: CompositeKey2[String, String] = compositeKey(firstName, lastName)
 }
 
 class Subject(val name: String, val parentSubjectId: Option[Long]) extends SchoolDb2Object {
 
-  lazy val courses = SchoolDb2.subjectToCourses.left(this)
+  lazy val courses: OneToMany[Course] = SchoolDb2.subjectToCourses.left(this)
 
-  lazy val childSubjects = SchoolDb2.subjectToParentSubject.left(this)
+  lazy val childSubjects: OneToMany[Subject] = SchoolDb2.subjectToParentSubject.left(this)
 
-  lazy val parentSubject = SchoolDb2.subjectToParentSubject.right(this)
+  lazy val parentSubject: ManyToOne[Subject] = SchoolDb2.subjectToParentSubject.right(this)
 }
 
 class CourseSubscription(val courseId: Long, val studentId: Long, var grade: Float)
     extends KeyedEntity[CompositeKey2[Long, Long]] {
 
-  def id = compositeKey(courseId, studentId)
+  def id: CompositeKey2[Long, Long] = compositeKey(courseId, studentId)
 }
 
 class CourseAssignment(val courseId: Long, val professorId: Long) extends KeyedEntity[CompositeKey2[Long, Long]] {
 
-  def id = compositeKey(courseId, professorId)
+  def id: CompositeKey2[Long, Long] = compositeKey(courseId, professorId)
 }
 
 case class Entry(text: String) extends KeyedEntity[Int] {
@@ -70,69 +71,69 @@ case class Comment(text: String, entryId: Int = 0, userId: Int = 0) extends Keye
 class ASTConstructionInterferenceA extends KeyedEntity[Long] {
   val id: Long = 0
 
-  lazy val bs = SchoolDb2.aToB.left(this)
+  lazy val bs: OneToMany[ASTConstructionInterferenceB] = SchoolDb2.aToB.left(this)
 }
 
 class ASTConstructionInterferenceB(val aId: Long) extends KeyedEntity[Long] {
   val id: Long = 0
 
   val field1 = "abc"
-  val field2 = field1
+  val field2: String = field1
 }
 
 class SchoolDb2 extends Schema {
 
   implicit object schoolDbObjectKED extends KeyedEntityDef[SchoolDb2Object, Long] {
-    def getId(a: SchoolDb2Object)       = a.id
-    def isPersisted(a: SchoolDb2Object) = a.id > 0
+    def getId(a: SchoolDb2Object): Long = a.id
+    def isPersisted(a: SchoolDb2Object): Boolean = a.id > 0
     def idPropertyName                  = "id"
   }
 
-  val entries  = table[Entry]
-  val comments = table[Comment]("commentz")
+  val entries: Table[Entry] = table[Entry]
+  val comments: Table[Comment] = table[Comment]("commentz")
 
-  val entryToComments =
+  val entryToComments: PrimitiveTypeModeForTests.OneToManyRelationImpl[Entry, Comment] =
     oneToManyRelation(entries, comments).via((e, c) => e.id === c.entryId)
 
-  val professors = table[Professor]
+  val professors: Table[Professor] = table[Professor]
 
-  val students = table[Student]
+  val students: Table[Student] = table[Student]
 
   on(students)(
     s =>
       declare(
-        s.firstName is (indexed),
-        s.lastName defaultsTo ("!"),
+        s.firstName is indexed,
+        s.lastName defaultsTo "!",
         s.fullName is (unique, indexed),
-        columns(s.id, s.firstName, s.lastName) are (indexed)
+        columns(s.id, s.firstName, s.lastName) are indexed
     )
   )
 
-  val courses = table[Course]
+  val courses: Table[Course] = table[Course]
 
-  val subjects = table[Subject]
+  val subjects: Table[Subject] = table[Subject]
 
-  val courseAssignments =
+  val courseAssignments: PrimitiveTypeModeForTests.ManyToManyRelationImpl[Professor, Course, CourseAssignment] =
     manyToManyRelation(professors, courses, "CourseAssignmentZ")
       .via[CourseAssignment]((p, c, a) => (p.id === a.professorId, a.courseId === c.id))
 
-  val courseSubscriptions =
+  val courseSubscriptions: PrimitiveTypeModeForTests.ManyToManyRelationImpl[Course, Student, CourseSubscription] =
     manyToManyRelation(courses, students)
       .via[CourseSubscription]((c, s, cs) => (cs.studentId === s.id, c.id === cs.courseId))
 
-  val subjectToCourses =
+  val subjectToCourses: PrimitiveTypeModeForTests.OneToManyRelationImpl[Subject, Course] =
     oneToManyRelation(subjects, courses).via((s, c) => s.id === c.subjectId)
 
-  val bossToProfessors =
+  val bossToProfessors: PrimitiveTypeModeForTests.OneToManyRelationImpl[Professor, Professor] =
     oneToManyRelation(professors, professors).via((boss, p) => boss.id === p.bossId)
 
-  val subjectToParentSubject =
+  val subjectToParentSubject: PrimitiveTypeModeForTests.OneToManyRelationImpl[Subject, Subject] =
     oneToManyRelation(subjects, subjects).via(
       (subject, childSubject) => Option(subject.id) === childSubject.parentSubjectId
     )
 
   // the default constraint for all foreign keys in this schema :
-  override def applyDefaultForeignKeyPolicy(foreignKeyDeclaration: ForeignKeyDeclaration) =
+  override def applyDefaultForeignKeyPolicy(foreignKeyDeclaration: ForeignKeyDeclaration): Unit =
     foreignKeyDeclaration.constrainReference
 
   //now we will redefine some of the foreign key constraints :
@@ -142,15 +143,15 @@ class SchoolDb2 extends Schema {
   //when a course is deleted, all of the subscriptions will get deleted :
   courseSubscriptions.leftForeignKeyDeclaration.constrainReference(onDelete cascade)
 
-  override def drop = {
-    Session.cleanupResources
-    super.drop
+  override def drop(): Unit = {
+    Session.cleanupResources()
+    super.drop()
   }
 
-  val as = table[ASTConstructionInterferenceA]
-  val bs = table[ASTConstructionInterferenceB]
+  val as: Table[ASTConstructionInterferenceA] = table[ASTConstructionInterferenceA]
+  val bs: Table[ASTConstructionInterferenceB] = table[ASTConstructionInterferenceB]
 
-  val aToB =
+  val aToB: PrimitiveTypeModeForTests.OneToManyRelationImpl[ASTConstructionInterferenceA, ASTConstructionInterferenceB] =
     oneToManyRelation(as, bs).via((a, b) => a.id === b.aId)
 
   aToB.foreignKeyDeclaration.unConstrainReference
@@ -165,19 +166,19 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
 
   def seedDataDef() = new {
 
-    val professeurTournesol = professors.insert(new Professor("Tournesol"))
-    val madProfessor        = professors.insert(new Professor("Mad Professor"))
+    val professeurTournesol: Professor = professors.insert(new Professor("Tournesol"))
+    val madProfessor: Professor = professors.insert(new Professor("Mad Professor"))
 
-    val philosophy        = subjects.insert(new Subject("Philosophy", None))
-    val chemistry         = subjects.insert(new Subject("Chemistry", None))
-    val physics           = subjects.insert(new Subject("Physic", None))
-    val computerScience   = subjects.insert(new Subject("Computer Science", None))
-    val computationTheory = subjects.insert(new Subject("Computation Theory", Some(computerScience.id)))
+    val philosophy: Subject = subjects.insert(new Subject("Philosophy", None))
+    val chemistry: Subject = subjects.insert(new Subject("Chemistry", None))
+    val physics: Subject = subjects.insert(new Subject("Physic", None))
+    val computerScience: Subject = subjects.insert(new Subject("Computer Science", None))
+    val computationTheory: Subject = subjects.insert(new Subject("Computation Theory", Some(computerScience.id)))
 
-    val chemistryCourse = courses.insert(new Course(chemistry.id))
-    val physicsCourse   = courses.insert(new Course(physics.id))
+    val chemistryCourse: Course = courses.insert(new Course(chemistry.id))
+    val physicsCourse: Course = courses.insert(new Course(physics.id))
 
-    val xiaoJimbao = students.insert(new Student("Xiao", "Jimbao"))
+    val xiaoJimbao: Student = students.insert(new Student("Xiao", "Jimbao"))
   }
 
 //  def testAll = {
@@ -216,7 +217,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
       from(subjects)(
         s =>
           where(s.name === "Philosophy")
-            select (&(from(subjects)(s2 => where(s2.name === s.name) select (s2.name))))
+            select &(from(subjects)(s2 => where(s2.name === s.name) select s2.name))
       )
 
     assertEquals(1, q.toList.length, "Could not find row")
@@ -229,9 +230,9 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
       from(subjects)(
         s =>
           where(
-            s.name === from(subjects)(s2 => where(s2.name === "Philosophy") select (s2.name))
+            s.name === from(subjects)(s2 => where(s2.name === "Philosophy") select s2.name)
           )
-            select (s.name)
+            select s.name
       )
 
     assertEquals(1, q.toList.length, "Could not find row")
@@ -242,11 +243,11 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
     val comment = Comment("A single comment")
     entry.comments.associate(comment)
 
-    from(entry.comments)(c => where(c.id === comment.id) select (c))
+    from(entry.comments)(c => where(c.id === comment.id) select c)
   }
 
   test("UpdateWithCompositePK") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     val xiao = { students.lookup(xiaoJimbao.id) }.get
@@ -265,7 +266,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
   }
 
   test("Many2ManyAssociationFromLeftSide") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     assertEquals(0, courseAssignments.Count: Long, 'testMany2ManyAssociationFromLeftSide)
@@ -290,7 +291,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
   }
 
   test("Many2ManyAssociationsFromRightSide") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     assertEquals(0, courseAssignments.Count: Long, 'testMany2ManyAssociationsFromRightSide)
@@ -315,7 +316,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
   }
 
   test("OneToMany") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     val philosophyCourse10AMWednesday = new Course
@@ -356,7 +357,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
   }
 
   test("CompositeEquality") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     val a = physicsCourse.professors.associate(professeurTournesol)
@@ -369,7 +370,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
       from(courseAssignments)(
         ca =>
           where(ca.id === (a.courseId, a.professorId))
-            select (ca)
+            select ca
       )
 
     _existsAndEquals(qA2.headOption, a)
@@ -389,16 +390,16 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
     passed('testCompositeEquality)
   }
 
-  private def _existsAndEquals(oca: Option[CourseAssignment], ca: CourseAssignment) = {
+  private def _existsAndEquals(oca: Option[CourseAssignment], ca: CourseAssignment): Unit = {
 
-    if (oca == None)
+    if (oca.isEmpty)
       org.squeryl.internals.Utils.throwError("query returned no rows")
 
     assertEquals(ca.id, oca.get.id, 'testCompositeEquality)
   }
 
   test("UniquenessConstraint") {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     assertEquals(0, courseAssignments.Count: Long, 'testUniquenessConstraint)
@@ -413,17 +414,16 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
 
     val sp: Option[Savepoint] =
       if (s.databaseAdapter.failureOfStatementRequiresRollback)
-        Some(s.connection.setSavepoint)
+        Some(s.connection.setSavepoint())
       else
         None
 
     try {
       physicsCourse.professors.associate(professeurTournesol)
     } catch {
-      case e: RuntimeException => {
+      case e: RuntimeException =>
         exceptionThrown = true
         sp.foreach(s.connection.rollback(_))
-      }
     }
 
     if (!exceptionThrown)
@@ -452,17 +452,17 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
 
   test("InFromSet") {
     val set = Set("foo", "bar", "baz")
-    from(entries)(e => where(e.text.in(set)) select (e)).toList
+    from(entries)(e => where(e.text.in(set)) select e).toList
     passed('testInFromSet)
   }
   test("InFromSeq") {
     val set = Set("foo", "bar", "baz").toSeq
-    from(entries)(e => where(e.text.in(set)) select (e)).toList
+    from(entries)(e => where(e.text.in(set)) select e).toList
     passed('testInFromSeq)
   }
 
   test("Inequality with query on right hand side", SingleTestRun) {
-    val seedData = seedDataDef
+    val seedData = seedDataDef()
     import seedData._
 
     val xiao = students.lookup(xiaoJimbao.id).get
@@ -483,7 +483,7 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
       from(courseSubscriptions)(
         p =>
           where(p.grade lte from(courseSubscriptions)(p => compute(avg(p.grade))))
-            select (p)
+            select p
       ).toList
 
     assert(belowOrEqualToAvg.size == 1)
@@ -492,15 +492,15 @@ abstract class SchoolDb2Tests extends SchemaTester with RunTestsInsideTransactio
       from(courseSubscriptions)(
         p =>
           where(p.grade lt from(courseSubscriptions)(p => compute(avg(p.grade))))
-            select (p)
+            select p
       ).toList
 
-    assert(belowAvg.size == 0)
+    assert(belowAvg.isEmpty)
   }
 
   test("#73 relations with Option[] on one side of the equality expression blow up") {
 
-    seedDataDef
+    seedDataDef()
 
     val cs = subjects.where(_.name === "Computer Science").single
 

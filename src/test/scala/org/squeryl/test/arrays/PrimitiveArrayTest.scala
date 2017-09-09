@@ -13,7 +13,7 @@ abstract class PrimitiveArrayTest extends SchemaTester with RunTestsInsideTransa
 
   test("can insert and query integer, double, and long array values in database") {
     transaction {
-      schema.drop
+      schema.drop()
       schema.create()
       swimmers.insert(
         new Swimmer(
@@ -104,7 +104,7 @@ object PrimitiveArraySchema extends Schema {
 
   val swimmers: Table[Swimmer] = table[Swimmer]("swimmer")
 
-  override def drop() = super.drop()
+  override def drop(): Unit = super.drop()
 }
 
 class Swimmer(

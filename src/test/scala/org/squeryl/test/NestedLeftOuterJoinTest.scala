@@ -1,14 +1,15 @@
 package org.squeryl.test
 
+import org.scalatest.Assertion
 import org.squeryl._
 import org.squeryl.test.PrimitiveTypeModeForTests._
 import org.squeryl.framework._
 
 object TestSchema extends Schema {
-  val a = table[A]
-  val b = table[B]
+  val a: Table[A] = table[A]
+  val b: Table[B] = table[B]
 
-  override def drop = super.drop
+  override def drop(): Unit = super.drop()
 }
 
 class A(val id: Int, val name: String) extends KeyedEntity[Int]
@@ -18,9 +19,9 @@ class B(val id: Int, val name: String, val aId: Int) extends KeyedEntity[Int]
 abstract class NestedLeftOuterJoinTest extends SchemaTester with RunTestsInsideTransaction {
   self: DBConnector =>
 
-  def schema = TestSchema
+  def schema: TestSchema.type = TestSchema
 
-  def testInnerJoin() = {
+  def testInnerJoin(): Assertion = {
     val q0 = from(TestSchema.b)(b => select(b))
 
     val q1 = from(TestSchema.a, q0)(
@@ -47,7 +48,7 @@ abstract class NestedLeftOuterJoinTest extends SchemaTester with RunTestsInsideT
 
     TestSchema.b.insert(new B(1, "b one", 1))
 
-    testInnerJoin
+    testInnerJoin()
 
     val q0 = from(TestSchema.b)(b => select(b))
 
@@ -68,16 +69,16 @@ abstract class NestedLeftOuterJoinTest extends SchemaTester with RunTestsInsideT
     checkLeftJoinQuery(aQuery)
   }
 
-  def checkLeftJoinQuery(q: Query[(A, Option[B])]) = {
+  def checkLeftJoinQuery(q: Query[(A, Option[B])]): Option[Assertion] = {
     q.headOption.map { (result) =>
       val (_, b) = result
 
-      b should not equal (None)
+      b should not equal None
     }
   }
 
-  def checkJoinQuery(q: Query[(A, B)]) = {
-    q.headOption should not equal (None)
+  def checkJoinQuery(q: Query[(A, B)]): Assertion = {
+    q.headOption should not equal None
   }
 
 }

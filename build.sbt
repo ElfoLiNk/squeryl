@@ -9,7 +9,7 @@ version := "0.9.9"
 //only release *if* -Drelease=true is passed to JVM
 version := {
   val v       = version.value
-  val release = Option(System.getProperty("release")).contains("true")
+  val release = Option(System.getProperty("release")) == Some("true")
   if (release)
     v
   else {
@@ -36,7 +36,7 @@ crossScalaVersions := Seq("2.12.3", Scala211, "2.10.6", "2.13.0-M1")
 
 scalacOptions in (Compile, doc) ++= {
   val base = (baseDirectory in LocalRootProject).value.getAbsolutePath
-  val hash = sys.process.Process("git rev-parse HEAD").lineStream_!.head
+  val hash = sys.process.Process("git rev-parse HEAD").lines_!.head
   Seq("-sourcepath", base, "-doc-source-url", "https://github.com/squeryl/squeryl/tree/" + hash + "€{FILE_PATH}.scala")
 }
 
@@ -131,4 +131,13 @@ libraryDependencies ++= {
     case _ =>
       Nil
   }
+}
+
+def latestScalafmt = "1.2.0"
+commands += Command.args("scalafmt", "Run scalafmt cli.") {
+  case (state, args) =>
+    val Right(scalafmt) =
+      org.scalafmt.bootstrap.ScalafmtBootstrap.fromVersion(latestScalafmt)
+    scalafmt.main("--non-interactive" +: args.toArray)
+    state
 }

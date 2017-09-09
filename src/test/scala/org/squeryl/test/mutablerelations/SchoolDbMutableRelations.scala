@@ -78,7 +78,7 @@ object SchoolDb2 extends Schema {
   override def applyDefaultForeignKeyPolicy(foreignKeyDeclaration: ForeignKeyDeclaration): Unit =
     foreignKeyDeclaration.constrainReference
 
-  override def drop() = {
+  override def drop(): Unit = {
     Session.cleanupResources()
     super.drop()
   }

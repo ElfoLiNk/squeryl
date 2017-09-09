@@ -28,11 +28,14 @@ before_script:
 - mysql -e "CREATE DATABASE squeryl;" -usqueryl -psqueryl
 - cp org.squeryl.tests.cfg.travis org.squeryl.tests.cfg
 script:
-- sbt ++${TRAVIS_SCALA_VERSION} test:compile
+- sbt ++${TRAVIS_SCALA_VERSION} clean coverage test:compile
 - rm -r src/test/scala/org/squeryl/oracle/
 - rm -r src/test/scala/org/squeryl/mssql/
-- sbt ++${TRAVIS_SCALA_VERSION} test
+- sbt ++${TRAVIS_SCALA_VERSION} coverage test
+after_success:
+- sbt coveralls
 env:
   global:
   - secure: B/esoBi0gr3+/83hoVYfWrcQtOtVoBwI4qK7PjDeH89gV1tiyNUOp/E9+Lxt1RyJ4kQuiFaA241Toshy69f9AyUL4NCUo42noYEX7v66VppkAY3MfrCPKGAN9/urQF/ZELFiQblmAX3UzD91xluFzHjYpLcRDYe0vtYWN8EqJLw=
   - secure: BFWLPui/MHNHvWcpePTagUsHqnt3wqbJILgZuSFcKE0yPuydJzgoi5DNake/5rvGYKdyC6nCj6T8nShCNIXqOPSV5JL2gWaPbMrNxquXDy4CUy4zeAMHHrWO314ft2Xoa7zr6M+KeWpVAR/dEIIncjFNbhO3kDAgFPn4Vqm5z+w=
+  - secure: xyFhwP5eow/iDQD6KDMy/UFFotWv5qTbTYJ4IVbAfAZMtDyA1rUp85l6FV5M+qFpPjeNNa898Em/Fw2AxCtsQw5YPP6ovTs8+2flh8MKmPqC3BIWrDwcBLrUdUHf0vJs2vWFXEEFY2pTdYO52i+jdngnrAvT4OtwNVbN4FbWS1Ip8dD1rwJkkyg796FL9wkjNb8NLwRx5cJkZ3h40uqFeoUW/KG+WbA4nMtIjId+MLqc1JWZl4yUCIC0iehuKHUYfu/TwFRfum7c5A2tLz10998/kYPJvYCSqtRZxZflFV5zGukBD2O2mW3xI5CQ74XgIXP9VAQkcrjnk/X2yrkQ4dSWSLytb9nxMrYi2kTuQJF0KdiHZ0Dyh6yW78dvLnB8Npnqb4pcWEGK92B2BBdp35tv278w0KDUZdqr1GliB2U1zFkvQnhhyzsqvxKcZtoI23haO1YBo3ijklkD2OVO59kxBlO3q3EfW7fqoVJpJWkDNcEfKTVnnCcQBG6yJv7HqiyTHirLYohnDgOy/AzlNkY22h2DBVfZleuHUMB7OSfEMzVO2z9m94Ac/KySHGYx0Wutgni29q3XK7mHmIaMHwpuC3wUuyTbGvVnh+Ibau0iRSIXc2l89cUAG6RtTlzZhuPj6CTeboUYZNLUzjyC59xREc1h+dXVgbucExAQYB0=

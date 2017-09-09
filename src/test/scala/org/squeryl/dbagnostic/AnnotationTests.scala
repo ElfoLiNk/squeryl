@@ -112,10 +112,9 @@ class AnnotationTests extends FunSuite with Matchers {
     val zozo = toasters.findFieldMetaDataForProperty("zozo").get
     assert(zozo.columnName == "Zozo12", "expected 'zozo' got " + zozo.columnName)
 
-// TODO: uncomment when scalac bug #3003 is resolved
-//    val dateOfPurchase = toasters.findFieldMetaDataForProperty("dateOfPurchase").get
-//    assert(dateOfPurchase.columnName == "dateOfPurchase", "expected 'dateOfPurchase' got " + dateOfPurchase.columnName)
-//    assert(dateOfPurchase.length == -1, "expected -1 got " + dateOfPurchase.length)
+    val dateOfPurchase = toasters.findFieldMetaDataForProperty("dateOfPurchase").get
+    assert(dateOfPurchase.columnName == "dateOfPurchase", "expected 'dateOfPurchase' got " + dateOfPurchase.columnName)
+    assert(dateOfPurchase.length == -1, "expected -1 got " + dateOfPurchase.length)
 
   }
 

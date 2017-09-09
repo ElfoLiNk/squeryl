@@ -1,5 +1,6 @@
 package org.squeryl.test
 
+import org.squeryl.Table
 import org.squeryl.framework._
 
 abstract class LeftJoinTest extends SchemaTester with RunTestsInsideTransaction {
@@ -100,19 +101,19 @@ import org.squeryl.test.PrimitiveTypeModeForTests._
 
 object LeftJoinSchema extends Schema {
 
-  val items = table[Item]("Item")
+  val items: Table[Item] = table[Item]("Item")
 
-  val months = table[Month]("Month")
+  val months: Table[Month] = table[Month]("Month")
 
-  val ordrs = table[Ordr]("Ordr")
+  val ordrs: Table[Ordr] = table[Ordr]("Ordr")
 
-  override def drop = super.drop
+  override def drop(): Unit = super.drop()
 }
 
 class Item(val id: Int, val name: String)
 
 class Month(val id: Int, val name: String) {
-  override def toString = "Mont(" + id + ":" + name + ")"
+  override def toString: String = "Mont(" + id + ":" + name + ")"
 }
 
 class Ordr(val id: Int, val monthId: Int, val itemId: Int, val qty: Int)

@@ -133,7 +133,7 @@ class Address(
   var appNumberSuffix: Option[String]
 ) extends SchoolDbObject {
 
-  override def toString = "rue " + streetName
+  override def toString: String = "rue " + streetName
 }
 
 class Professor(
@@ -147,7 +147,7 @@ class Professor(
 
   def this() = this("", 0F, Some(0F), BigDecimal(0), Some(BigDecimal(0)))
   var id: Long          = 0
-  override def toString = "Professor:" + id + ",sal=" + yearlySalary
+  override def toString: String = "Professor:" + id + ",sal=" + yearlySalary
 }
 
 case class CourseOffering(courseId: Int, professorId: Long, addressId: Int, description: String)

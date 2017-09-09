@@ -1,14 +1,16 @@
 package org.squeryl.test
 
 import org.squeryl._
-import org.squeryl.framework.{ DBConnector, RunTestsInsideTransaction, SchemaTester, SingleTestRun }
+import org.squeryl.framework.{DBConnector, RunTestsInsideTransaction, SchemaTester, SingleTestRun}
 import java.util.UUID
+
+import org.squeryl.dsl.OneToMany
 import org.squeryl.test.PrimitiveTypeModeForTests._
 
 object UuidTests {
   class UuidAsProperty extends KeyedEntity[Long] {
     val id: Long = 0
-    val uuid     = UUID.randomUUID
+    val uuid: UUID = UUID.randomUUID
   }
 
   class UuidWithOption(val optionalUuid: Option[UUID]) extends KeyedEntity[Long] {
@@ -17,8 +19,8 @@ object UuidTests {
   }
 
   class UuidAsId extends KeyedEntity[UUID] {
-    var id            = UUID.randomUUID
-    lazy val foreigns = TestSchema.uuidOneToMany.left(this)
+    var id: UUID = UUID.randomUUID
+    lazy val foreigns: OneToMany[UuidAsForeignKey] = TestSchema.uuidOneToMany.left(this)
   }
 
   class UuidAsForeignKey(val foreignUuid: UUID) extends KeyedEntity[Long] {
@@ -26,15 +28,15 @@ object UuidTests {
   }
 
   object TestSchema extends Schema {
-    val uuidAsProperty   = table[UuidAsProperty]
-    val uuidAsId         = table[UuidAsId]
-    val uuidAsForeignKey = table[UuidAsForeignKey]
-    val uuidWithOption   = table[UuidWithOption]
+    val uuidAsProperty: Table[UuidAsProperty] = table[UuidAsProperty]
+    val uuidAsId: Table[UuidAsId] = table[UuidAsId]
+    val uuidAsForeignKey: Table[UuidAsForeignKey] = table[UuidAsForeignKey]
+    val uuidWithOption: Table[UuidWithOption] = table[UuidWithOption]
 
-    val uuidOneToMany =
+    val uuidOneToMany: PrimitiveTypeModeForTests.OneToManyRelationImpl[UuidAsId, UuidAsForeignKey] =
       oneToManyRelation(uuidAsId, uuidAsForeignKey).via(_.id === _.foreignUuid)
 
-    override def drop() = {
+    override def drop(): Unit = {
       Session.cleanupResources()
       super.drop()
     }

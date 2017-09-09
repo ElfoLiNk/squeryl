@@ -318,14 +318,16 @@ class PosoMetaData[T](val clasz: Class[T], val schema: Schema, val viewOrTable: 
 
   private def _fillWithMembers(clasz: Class[_], members: ArrayBuffer[(Member, mutable.HashSet[Annotation])]): Unit = {
 
-    for{m <-clasz.getMethods if(m.getDeclaringClass != classOf[Object]) && _includeFieldOrMethodType(m.getReturnType)} {
+    for {
+      m <- clasz.getMethods if m.getDeclaringClass != classOf[Object] && _includeFieldOrMethodType(m.getReturnType)
+    } {
       m.setAccessible(true)
       val t = (m, new mutable.HashSet[Annotation])
       _addAnnotations(m, t._2)
       members.append(t)
     }
 
-    for{m <- clasz.getDeclaredFields if (m.getName.indexOf("$") == -1) && _includeFieldOrMethodType(m.getType)} {
+    for { m <- clasz.getDeclaredFields if m.getName.indexOf("$") == -1 && _includeFieldOrMethodType(m.getType) } {
       m.setAccessible(true)
       val t = (m, new mutable.HashSet[Annotation])
       _addAnnotations(m, t._2)
