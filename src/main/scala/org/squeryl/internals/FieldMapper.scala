@@ -215,19 +215,24 @@ trait FieldMapper {
     //}
 
     def enumValueTEF[A >: Enumeration#Value <: Enumeration#Value](ev: Enumeration#Value) =
-      new JdbcMapper[Int, A] with TypedExpressionFactory[A, TEnumValue[A]] {
+      new JdbcMapper[String, A] with TypedExpressionFactory[A, TEnumValue[A]] {
+        val enu = Utils.enumerationForValue(ev)
+        def extractNativeJdbcValue(rs: ResultSet, i: Int): String =
+          rs.getString(i)
+        def defaultColumnLength: Int    = stringTEF.defaultColumnLength
+        def sample: A                   = ev
+        def convertToJdbc(v: A): String = v.toString
+        def convertFromJdbc(s: String) =
+          enu.values.find(_.toString == s).getOrElse(PrimitiveTypeSupport.DummyEnum.DummyEnumerationValue)
+      }
 
-        val enu: Enumeration = Utils.enumerationForValue(ev)
-
-        def extractNativeJdbcValue(rs: ResultSet, i: Int): Int = rs.getInt(i)
-        def defaultColumnLength: Int                           = intTEF.defaultColumnLength
-        def sample: A                                          = ev
-        def convertToJdbc(v: A): Int                           = v.id
-        def convertFromJdbc(v: Int): A = {
-          enu.values
-            .find(_.id == v)
-            .getOrElse(DummyEnum.DummyEnumerationValue) // JDBC has no concept of null value for primitive types (ex. Int)
-          // at this level, we mimic this JDBC flaw (the Option / None based on jdbc.wasNull will get sorted out by optionEnumValueTEF)
+    def optionEnumValueTEF[A >: Enumeration#Value <: Enumeration#Value](ev: Option[Enumeration#Value]) =
+      new TypedExpressionFactory[Option[A], TOptionEnumValue[A]]
+      with DeOptionizer[String, A, TEnumValue[A], Option[A], TOptionEnumValue[A]] {
+        val deOptionizer = {
+          val e =
+            ev.getOrElse(PrimitiveTypeSupport.DummyEnum.DummyEnumerationValue)
+          enumValueTEF[A](e)
         }
       }
 
@@ -235,28 +240,6 @@ trait FieldMapper {
       type DummyEnum = Value
       val DummyEnumerationValue = Value(-1, "DummyEnumerationValue")
     }
-
-    def optionEnumValueTEF[A >: Enumeration#Value <: Enumeration#Value](ev: Option[Enumeration#Value]) =
-      new TypedExpressionFactory[Option[A], TOptionEnumValue[A]]
-      with DeOptionizer[Int, A, TEnumValue[A], Option[A], TOptionEnumValue[A]] {
-        val deOptionizer: JdbcMapper[Int, A] with TypedExpressionFactory[A, TEnumValue[A]] {
-          def sample: A
-
-          def defaultColumnLength: Int
-
-          def convertFromJdbc(v: Int): A
-
-          def convertToJdbc(v: A): Int
-
-          def extractNativeJdbcValue(rs: ResultSet, i: Int): Int
-
-          val enu: Enumeration
-        } = {
-          val e =
-            ev.getOrElse(PrimitiveTypeSupport.DummyEnum.DummyEnumerationValue)
-          enumValueTEF[A](e)
-        }
-      }
 
     // =========================== Numerical Integral ===========================
 
@@ -457,7 +440,7 @@ trait FieldMapper {
 
   initialize()
 
-  protected def initialize(): Option[FieldAttributesBasedOnType[_]] = {
+  protected def initialize() = {
     import PrimitiveTypeSupport._
 
     register(byteTEF)
@@ -488,10 +471,15 @@ trait FieldMapper {
      * parentEnumeration.values.find(_.id == v), the conversion is done
      * in FieldMetaData.canonicalEnumerationValueFor(i: Int)
      */
-    val z = new FieldAttributesBasedOnType[Any](new {
-      def map(rs: ResultSet, i: Int): Int  = rs.getInt(i)
-      def convertToJdbc(v: AnyRef): AnyRef = v
-    }, re.defaultColumnLength, re.sample, classOf[java.lang.Integer])
+    val z = new FieldAttributesBasedOnType[Any](
+      new {
+        def map(rs: ResultSet, i: Int): String = rs.getString(i)
+        def convertToJdbc(v: AnyRef): AnyRef   = if (v != null) v.toString else v
+      },
+      re.defaultColumnLength,
+      re.sample,
+      classOf[java.lang.String]
+    )
 
     registry.put(z.clasz, z)
     registry.put(z.clasz.getSuperclass, z)

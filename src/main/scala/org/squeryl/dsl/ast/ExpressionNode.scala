@@ -360,7 +360,7 @@ class ConstantTypedExpression[A1, T1](
   i: Option[TypedExpressionFactory[A1, _]]
 ) extends TypedExpression[A1, T1] {
 
-  private def needsQuote = value.isInstanceOf[String]
+  private val needsQuote = value.isInstanceOf[String] || value.isInstanceOf[Enumeration#Value]
 
   override def mapper: OutMapper[A1] = i.get.createOutMapper
 

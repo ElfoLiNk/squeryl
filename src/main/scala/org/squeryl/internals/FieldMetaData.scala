@@ -60,14 +60,14 @@ class FieldMetaData(
       case _                          => None
     }
 
-  def canonicalEnumerationValueFor(id: Int): (_$1#Value) forSome { type _$1 >: Enumeration <: Enumeration } =
+  def canonicalEnumerationValueFor(s: String): (_$1#Value) forSome { type _$1 >: Enumeration <: Enumeration } =
     if (sampleValue == null)
       org.squeryl.internals.Utils.throwError(
         "classes with Enumerations must have a zero param constructor that assigns a sample to the enumeration field"
       )
     else
       enumeration flatMap { e: Enumeration =>
-        e.values find { _.id == id }
+        e.values find { _.toString == s }
       } get
 
   /**
@@ -316,7 +316,7 @@ class FieldMetaData(
         if (v == null)
           null
         else if (enumeration.isDefined)
-          canonicalEnumerationValueFor(v.asInstanceOf[java.lang.Integer].intValue)
+          canonicalEnumerationValueFor(v.asInstanceOf[java.lang.String])
         else if (customTypeFactory.isEmpty)
           v
         else {
